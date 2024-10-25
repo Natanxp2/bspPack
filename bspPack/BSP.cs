@@ -577,7 +577,12 @@ namespace BSPPackStandalone
 	
 	class Program
     {
-		public static List<string> sourceDirectories = new List<string>();
+		private static List<string> sourceDirectories = new List<string>();
+		private static List<string> includeFiles = new List<string>();
+        private static List<string> excludeFiles = new List<string>();
+        private static List<string> excludeDirs = new List<string>();
+        private static List<string> excludedVpkFiles = new List<string>();
+		private static string outputFile = "files.txt";
 		
         static void Main(string[] args)
         {
@@ -606,6 +611,11 @@ namespace BSPPackStandalone
 			string unpackDir = Path.Combine(Config.tempDirectory, Guid.NewGuid().ToString());
 			AssetUtils.UnpackBSP(unpackDir, filePath);
 			AssetUtils.findBspPakDependencies(bsp, unpackDir);
+			AssetUtils.findBspUtilityFiles(bsp, sourceDirectories, false, false);
+			Console.WriteLine("\nInitializing pak file...");
+			PakFile pakfile = new PakFile(bsp, sourceDirectories, includeFiles, excludeFiles, excludeDirs, excludedVpkFiles, outputFile, false);
+			Console.WriteLine("Writing file list...");
+			pakfile.OutputToFile();
 			
             try
             {
