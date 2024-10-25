@@ -7,29 +7,60 @@ using System.Text.RegularExpressions;
 
 namespace BSPPackStandalone
 {
+	// this is the class that stores data about the bsp.
+	// You can find information about the file format here
+	// https://developer.valvesoftware.com/wiki/Source_BSP_File_Format#BSP_file_header
     class CompressedBSPException : Exception { }
 
     class BSP
     {
-        private KeyValuePair<int, int>[] offsets; // offset/length
+		private KeyValuePair<int, int>[] offsets; // offset/length
         private static readonly char[] SpecialCaracters = { '*', '#', '@', '>', '<', '^', '(', ')', '}', '$', '!', '?', ' ' };
 
         public List<Dictionary<string, string>> entityList { get; private set; }
+
         public List<List<Tuple<string, string>>> entityListArrayForm { get; private set; }
+
         public List<int>[] modelSkinList { get; private set; }
+
         public List<string> ModelList { get; private set; }
+
         public List<string> EntModelList { get; private set; }
+
         public List<string> ParticleList { get; private set; }
+
         public List<string> TextureList { get; private set; }
         public List<string> EntTextureList { get; private set; }
+
         public List<string> EntSoundList { get; private set; }
+
         public List<string> MiscList { get; private set; }
+
+        // key/values as internalPath/externalPath
+        public KeyValuePair<string, string> particleManifest { get; set; }
+        public KeyValuePair<string, string> soundscript { get; set; }
+        public KeyValuePair<string, string> soundscape { get; set; }
+        public KeyValuePair<string, string> detail { get; set; }
+        public KeyValuePair<string, string> nav { get; set; }
+        public List<KeyValuePair<string, string>> res { get; } = new List<KeyValuePair<string, string>>();
+        public KeyValuePair<string, string> kv { get; set; }
+        public KeyValuePair<string, string> txt { get; set; }
+        public KeyValuePair<string, string> jpg { get; set; }
+        public KeyValuePair<string, string> radartxt { get; set; }
+        public List<KeyValuePair<string, string>> radardds { get; set; }
+        public KeyValuePair<string, string> RadarTablet { get; set; }
+        public List<KeyValuePair<string, string>> languages { get; set; }
+        public List<KeyValuePair<string, string>> VehicleScriptList { get; set; }
+        public List<KeyValuePair<string, string>> EffectScriptList { get; set; }
+        public List<string> vscriptList { get; set; }
+        public List<KeyValuePair<string, string>> PanoramaMapBackgrounds { get; set; }
+        public KeyValuePair<string, string> PanoramaMapIcon { get; set; }
 
         public FileInfo file { get; private set; }
         private bool isL4D2 = false;
         private int bspVersion;
 
-          public BSP(FileInfo file)
+        public BSP(FileInfo file)
         {
             this.file = file;
             offsets = new KeyValuePair<int, int>[64];
@@ -239,8 +270,7 @@ namespace BSPPackStandalone
 	            {
 		            if (ent.ContainsKey("directory"))
 		            {
-						var gameFolderPath = @"E:\__STEAM__\steamapps\common\Momentum Mod Playtest\momentum";
-						var directory = Path.Combine(gameFolderPath, "materials", "vgui", ent["directory"]);
+						var directory = Path.Combine(Config.gameFolderPath, "materials", "vgui", ent["directory"]);
 			            if (Directory.Exists(directory))
 			            {
 				            foreach (var file in Directory.GetFiles(directory))
@@ -545,8 +575,10 @@ namespace BSPPackStandalone
         }
     }
 	
-	   class Program
+	class Program
     {
+		public static List<string> sourceDirectories = new List<string>();
+		
         static void Main(string[] args)
         {
             if (args.Length == 0)
@@ -562,16 +594,22 @@ namespace BSPPackStandalone
                 Console.WriteLine("File not found: " + filePath);
                 return;
             }
-			
+
 			string keysFolder = Path.Combine(Directory.GetCurrentDirectory(), "Keys");
-
 			Keys.InitializeKeys(keysFolder);
-
+			
+			FileInfo fileInfo = new FileInfo(filePath);
+			BSP bsp = new BSP(fileInfo);
+			
+			
+			sourceDirectories = AssetUtils.GetSourceDirectories(Config.gameFolderPath);
+			string unpackDir = Path.Combine(Config.tempDirectory, Guid.NewGuid().ToString());
+			AssetUtils.UnpackBSP(unpackDir, filePath);
+			AssetUtils.findBspPakDependencies(bsp, unpackDir);
+			
             try
             {
-                FileInfo fileInfo = new FileInfo(filePath);
-                BSP bsp = new BSP(fileInfo);
-
+				
                 Console.WriteLine("Models:");
                 bsp.ModelList.ForEach(Console.WriteLine);
 
@@ -597,7 +635,6 @@ namespace BSPPackStandalone
             {
                 Console.WriteLine("Error: " + ex.Message);
             }
-        }
+        }	
     }
-	
 }

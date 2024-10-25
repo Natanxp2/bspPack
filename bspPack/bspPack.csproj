@@ -13,4 +13,8 @@
     </None>
   </ItemGroup>
   
+  <ItemGroup>
+    <PackageReference Include="ValveKeyValue" Version="0.11.0.378" />
+  </ItemGroup>
+  
 </Project>
