@@ -1097,7 +1097,7 @@ namespace BSPPackStandalone
                 }
             }
 
-            string steamAppsPath = Path.Combine(Config.steamPath, "steamapps");
+            string steamAppsPath = Config.SteamAppsPath;
 
             // get game installation locations
             var appLocations = GetAppInstallLocations(steamAppsPath);
@@ -1210,20 +1210,20 @@ namespace BSPPackStandalone
             return directories;
         }
 		
-		public static void UnpackBSP(string unpackDir, string bspPath)
+		public static void UnpackBSP(string unpackDir)
 		{
 			// Ensure temp directory exists
 			Directory.CreateDirectory(unpackDir);
 
 			string arguments = "-extractfiles \"$bspold\" \"$dir\"";
-			arguments = arguments.Replace("$bspold", bspPath);
+			arguments = arguments.Replace("$bspold", Config.BSPFile);
 			arguments = arguments.Replace("$dir", unpackDir);
 
-			var startInfo = new ProcessStartInfo(Config.bspZipPath, arguments);
+			var startInfo = new ProcessStartInfo(Config.BSPZip, arguments);
 			startInfo.UseShellExecute = false;
 			startInfo.CreateNoWindow = true;
 			startInfo.RedirectStandardOutput = true;
-			startInfo.EnvironmentVariables["VPROJECT"] = Config.gameFolderPath;
+			startInfo.EnvironmentVariables["VPROJECT"] = Config.GameFolder;
 
 			var p = new Process { StartInfo = startInfo };
 			p.Start();

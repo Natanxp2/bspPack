@@ -14,6 +14,7 @@
   </ItemGroup>
   
   <ItemGroup>
+    <PackageReference Include="Glob" Version="1.1.9" />
     <PackageReference Include="ValveKeyValue" Version="0.11.0.378" />
   </ItemGroup>
   

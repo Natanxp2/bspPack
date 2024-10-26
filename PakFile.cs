@@ -95,7 +95,7 @@ namespace BSPPackStandalone
             FileInfo fileInfo = new FileInfo(externalPath);
 
             // default base directory is the game folder
-            string baseDir = Config.gameFolderPath;
+            string baseDir = Config.GameFolder;
 
             var potentialSubDir = new List<string>(sourceDirs); // clone to prevent accidental modification
             potentialSubDir.Remove(baseDir);

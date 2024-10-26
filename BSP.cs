@@ -270,7 +270,7 @@ namespace BSPPackStandalone
 	            {
 		            if (ent.ContainsKey("directory"))
 		            {
-						var directory = Path.Combine(Config.gameFolderPath, "materials", "vgui", ent["directory"]);
+						var directory = Path.Combine(Config.GameFolder, "materials", "vgui", ent["directory"]);
 			            if (Directory.Exists(directory))
 			            {
 				            foreach (var file in Directory.GetFiles(directory))
@@ -573,78 +573,5 @@ namespace BSPPackStandalone
 
             return new Tuple<string, string, string>(io[0], targetInput, parameter);
         }
-    }
-	
-	class Program
-    {
-		private static List<string> sourceDirectories = new List<string>();
-		private static List<string> includeFiles = new List<string>();
-        private static List<string> excludeFiles = new List<string>();
-        private static List<string> excludeDirs = new List<string>();
-        private static List<string> excludedVpkFiles = new List<string>();
-		private static string outputFile = "files.txt";
-		
-        static void Main(string[] args)
-        {
-            if (args.Length == 0)
-            {
-                Console.WriteLine("Please provide a path to the BSP file.");
-                return;
-            }
-
-            string filePath = args[0];
-
-            if (!File.Exists(filePath))
-            {
-                Console.WriteLine("File not found: " + filePath);
-                return;
-            }
-
-			string keysFolder = Path.Combine(Directory.GetCurrentDirectory(), "Keys");
-			Keys.InitializeKeys(keysFolder);
-			
-			FileInfo fileInfo = new FileInfo(filePath);
-			BSP bsp = new BSP(fileInfo);
-			
-			
-			sourceDirectories = AssetUtils.GetSourceDirectories(Config.gameFolderPath);
-			string unpackDir = Path.Combine(Config.tempDirectory, Guid.NewGuid().ToString());
-			AssetUtils.UnpackBSP(unpackDir, filePath);
-			AssetUtils.findBspPakDependencies(bsp, unpackDir);
-			AssetUtils.findBspUtilityFiles(bsp, sourceDirectories, false, false);
-			Console.WriteLine("\nInitializing pak file...");
-			PakFile pakfile = new PakFile(bsp, sourceDirectories, includeFiles, excludeFiles, excludeDirs, excludedVpkFiles, outputFile, false);
-			Console.WriteLine("Writing file list...");
-			pakfile.OutputToFile();
-			
-            try
-            {
-				
-                Console.WriteLine("Models:");
-                bsp.ModelList.ForEach(Console.WriteLine);
-
-                Console.WriteLine("\nEntity Models:");
-                bsp.EntModelList.ForEach(Console.WriteLine);
-
-                Console.WriteLine("\nParticles:");
-                bsp.ParticleList.ForEach(Console.WriteLine);
-
-                Console.WriteLine("\nTextures:");
-                bsp.TextureList.ForEach(Console.WriteLine);
-
-                Console.WriteLine("\nEntity Textures:");
-                bsp.EntTextureList.ForEach(Console.WriteLine);
-
-                Console.WriteLine("\nSounds:");
-                bsp.EntSoundList.ForEach(Console.WriteLine);
-
-                Console.WriteLine("\nMiscellaneous Files:");
-                bsp.MiscList.ForEach(Console.WriteLine);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error: " + ex.Message);
-            }
-        }	
     }
 }
