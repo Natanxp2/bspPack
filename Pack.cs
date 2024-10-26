@@ -19,10 +19,11 @@ namespace BSPPackStandalone
 		private static KVSerializer KVSerializer = KVSerializer.Create(KVSerializationFormat.KeyValues1Text);
 		
 		private static List<string> sourceDirectories = new List<string>();
-		private static List<string> includedFiles = new List<string>();
-		private static List<string> excludedFiles = new List<string>();
-		private static List<string> excludedDirs = new List<string>();
-		private static List<string> excludedVpkFiles = new List<string>();
+		private static List<string> includeFiles = new List<string>();
+		private static List<string> includeDirs = new List<string>();
+		private static List<string> excludeFiles = new List<string>();
+		private static List<string> excludeDirs = new List<string>();
+		private static List<string> excludeVpkFiles = new List<string>();
 		private static string outputFile = "BSPZipFiles/files.txt";
 		
 		private static bool verbose;
@@ -31,10 +32,20 @@ namespace BSPPackStandalone
 		private static bool noswvtx;
 		private static bool genParticleManifest;
 		private static bool compress;
-	
+		private static bool reset;
+		private static bool modify;
+		
 		static void Main(string[] args)
 		{
-			Console.WriteLine("Reading BSP...");
+			reset = args.Contains("--reset");
+			modify = args.Contains("--modify");
+		
+			SetPaths(reset);
+			Config.GameFolder = Environment.GetEnvironmentVariable("GamePath", EnvironmentVariableTarget.User);
+			Config.SteamAppsPath = Path.Combine(Environment.GetEnvironmentVariable("Steam", EnvironmentVariableTarget.User),"steamapps");
+			Config.InitializeConfig();
+			
+			
 			if (args.Length == 0)
 			{
 				Console.WriteLine("Please provide a path to the BSP file.");
@@ -42,12 +53,24 @@ namespace BSPPackStandalone
 			}
 			
 			Config.BSPFile = args[^1];
-			
 			if (!File.Exists(Config.BSPFile))
-			{
-				Console.WriteLine("File not found: " + Config.BSPFile);
-				return;
+			{	
+				if(reset)
+					return;
+				else if(modify)
+				{
+					CreateDefaultConfigFile();
+					return;
+				}
+				else
+				{
+					Console.WriteLine("File not found: " + Config.BSPFile);
+					return;
+				}
 			}
+			
+			if(modify)
+				LoadPathsFromFile();
 			
 			verbose = args.Contains("--verbose");
 			dryrun = args.Contains("--dryrun");
@@ -56,7 +79,7 @@ namespace BSPPackStandalone
 			genParticleManifest = args.Contains("--genParticleManifest");
 			compress = args.Contains("--compress");
 
-				
+			Console.WriteLine("Reading BSP...");
 			FileInfo fileInfo = new FileInfo(Config.BSPFile);
 			BSP bsp = new BSP(fileInfo);
 			
@@ -71,8 +94,10 @@ namespace BSPPackStandalone
 			if(dryrun) 
 				outputFile = $"BSPZipFiles/{Path.GetFileNameWithoutExtension(bsp.file.FullName)}_files.txt";
 			
+		
+			
 			Console.WriteLine("\nInitializing pak file...");
-			PakFile pakfile = new PakFile(bsp, sourceDirectories, includedFiles, excludedFiles, excludedDirs, excludedVpkFiles, outputFile, noswvtx);
+			PakFile pakfile = new PakFile(bsp, sourceDirectories, includeFiles, excludeFiles, excludeDirs, excludeVpkFiles, outputFile, noswvtx);
 			Console.WriteLine("Writing file list...");
 			pakfile.OutputToFile();
 			
@@ -84,7 +109,7 @@ namespace BSPPackStandalone
 			
 			if(genParticleManifest)
 			{
-				ParticleManifest manifest = new ParticleManifest(sourceDirectories, excludedDirs, excludedFiles, bsp, Config.BSPFile, Config.GameFolder);
+				ParticleManifest manifest = new ParticleManifest(sourceDirectories, excludeDirs, excludeFiles, bsp, Config.BSPFile, Config.GameFolder);
 				bsp.particleManifest = manifest.particleManifest;
 			}
 			
@@ -97,7 +122,141 @@ namespace BSPPackStandalone
 				CompressBSP();
 			}
 			
-			Console.WriteLine("Finished!");		
+			Console.WriteLine("Finished!");			
+		}
+		
+		static void SetPaths(bool reset)
+		{
+			if(Environment.GetEnvironmentVariable("GamePath", EnvironmentVariableTarget.User) == null || reset)		
+			{
+				string path;
+				do
+				{
+					Console.Write("Provide a path to game folder ( folder which contains gameinfo.txt ): ");
+					path = Console.ReadLine();
+					string gameinfo = Path.Combine(path,"gameinfo.txt");
+					if(!File.Exists(gameinfo))
+						Console.Write("gameinfo.txt is not present in provided location.\n");
+				} 
+				while(!File.Exists(Path.Combine(path,"gameinfo.txt")));
+				
+				Environment.SetEnvironmentVariable("GamePath", path, EnvironmentVariableTarget.User);
+			}
+			
+			if(Environment.GetEnvironmentVariable("Steam", EnvironmentVariableTarget.User) == null || reset)		
+			{
+				string path;
+				do
+				{
+					Console.Write("Provide a path to default Steam folder: ");
+					path = Console.ReadLine();
+					string steamapps = Path.Combine(path,"steamapps");
+					if(!Directory.Exists(steamapps))
+						Console.Write("steamapps folder is not present in provided location.\n");
+				} 
+				while(!Directory.Exists(Path.Combine(path,"steamapps")));
+				
+				Environment.SetEnvironmentVariable("Steam", path, EnvironmentVariableTarget.User);
+			}
+		}
+		static void LoadPathsFromFile()
+		{		
+			if (!File.Exists("config.ini"))
+			{
+				Console.WriteLine($"config.ini not found, run 'bspPack --modify' to create it");
+				System.Environment.Exit(1);
+			}
+
+			string currentSection = "";
+			foreach (var line in File.ReadLines("config.ini"))
+			{
+				if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#"))
+					continue;
+
+				if (line.StartsWith("[") && line.EndsWith("]"))
+				{
+					currentSection = line.Trim('[', ']');
+					continue;
+				}
+				var trimmedLine = line.Trim().Trim('"');
+				switch (currentSection)
+				{
+					case "IncludeFiles":
+						if(!File.Exists(trimmedLine))
+						{
+							Console.WriteLine($"Could not find file {trimmedLine}");
+							break;
+						}	
+						includeFiles.Add(trimmedLine);
+						break;
+					case "IncludeDirs":
+						if(!Directory.Exists(trimmedLine))
+						{
+							Console.WriteLine($"Could not find directory {trimmedLine}");
+							break;
+						}	
+						includeDirs.Add(trimmedLine);
+						break;
+					case "ExcludeFiles":
+						if(!File.Exists(trimmedLine))
+						{
+							Console.WriteLine($"Could not find file {trimmedLine}");
+							break;
+						}	
+						excludeFiles.Add(trimmedLine);
+						break;
+					case "ExcludeDirs":
+						if(!Directory.Exists(trimmedLine))
+						{
+							Console.WriteLine($"Could not find directory {trimmedLine}");
+							break;
+						}
+						excludeDirs.Add(trimmedLine);						
+						break;
+					case "ExcludeVpkFiles":
+						if(!File.Exists(trimmedLine))
+						{
+							Console.WriteLine($"Could not find file {trimmedLine}");
+							break;
+						}	
+						excludeVpkFiles.Add(trimmedLine);
+						break;
+				}
+			}
+		}
+		
+		static void CreateDefaultConfigFile()
+		{
+			if (File.Exists("config.ini"))
+			{
+				Console.WriteLine("Configuration file already exists.");
+				return;
+			}
+
+			var lines = new List<string>
+			{
+				"# One path per line",
+				"[IncludeFiles]",
+				"",
+				"[IncludeDirs]",
+				"",
+				"[ExcludeFiles]",
+				"",
+				"[ExcludeDirs]",
+				"",
+				"[ExcludeVpkFiles]",
+				""
+			};
+
+			try
+			{
+				File.WriteAllLines("config.ini", lines);
+				Console.WriteLine($"Default configuration file has been created.");
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Error creating configuration file: {ex.Message}");
+			}
 		}
 		
 		static void PackBSP(string outputFile)
