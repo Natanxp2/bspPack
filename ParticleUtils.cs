@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BSPPackStandalone.UtilityProcess
+namespace BSPPackStandalone.UtilityProcesses
 {
     public class PCF
     {
@@ -343,7 +343,7 @@ namespace BSPPackStandalone.UtilityProcess
 
         public ParticleManifest (List<string> sourceDirectories, List<string> ignoreDirectories, List<string> excludedFiles, BSP map, string bspPath, string gameFolder)
         {
-			Console.WriteLine($"Generating Particle Manifest...");
+			Console.WriteLine($"\nGenerating Particle Manifest...");
 
             baseDirectory = gameFolder + "\\";
 

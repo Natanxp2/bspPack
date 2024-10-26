@@ -5,7 +5,7 @@ namespace BSPPackStandalone
 {
     public static class Config
     {
-		public static string BSPFile;
+		public static string BSPFile { get; set; }
         public static readonly string GameFolder = @"E:\__STEAM__\steamapps\common\Momentum Mod Playtest\momentum";
         public static readonly string SteamAppsPath = GameFolder.Substring(0, GameFolder.IndexOf("steamapps") + 9);
         public static readonly string BSPZip = Path.Combine(GameFolder, @"..\bin\win64", "bspzip.exe");

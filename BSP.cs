@@ -95,7 +95,8 @@ namespace BSPPackStandalone
                     bsp.Seek(offsets[0].Key, SeekOrigin.Begin);
                     if (reader.ReadChars(4).SequenceEqual("LZMA".ToCharArray()))
                     {
-                        throw new CompressedBSPException();
+						Console.WriteLine("Compressed BSPs are not supported!");
+                        System.Environment.Exit(1);
                     }
 
                     buildEntityList(bsp, reader);
