@@ -40,11 +40,7 @@ namespace BSPPackStandalone
 			reset = args.Contains("--reset");
 			modify = args.Contains("--modify");
 		
-			SetPaths(reset);
-			Config.GameFolder = Environment.GetEnvironmentVariable("GamePath", EnvironmentVariableTarget.User);
-			Config.SteamAppsPath = Path.Combine(Environment.GetEnvironmentVariable("Steam", EnvironmentVariableTarget.User),"steamapps");
-			Config.InitializeConfig();
-			
+			Config.LoadConfig("config.ini");
 			
 			if (args.Length == 0)
 			{
@@ -53,13 +49,14 @@ namespace BSPPackStandalone
 			}
 			
 			Config.BSPFile = args[^1];
+			
 			if (!File.Exists(Config.BSPFile))
 			{	
 				if(reset)
 					return;
-				else if(modify)
+				if(modify)
 				{
-					CreateDefaultConfigFile();
+					Config.CreateDefaultResourceConfigFile("ResourceConfig.ini");
 					return;
 				}
 				else
@@ -70,7 +67,7 @@ namespace BSPPackStandalone
 			}
 			
 			if(modify)
-				LoadPathsFromFile();
+				LoadPathsFromFile("ResourceConfig.ini");
 			
 			verbose = args.Contains("--verbose");
 			dryrun = args.Contains("--dryrun");
@@ -93,8 +90,6 @@ namespace BSPPackStandalone
 			
 			if(dryrun) 
 				outputFile = $"BSPZipFiles/{Path.GetFileNameWithoutExtension(bsp.file.FullName)}_files.txt";
-			
-		
 			
 			Console.WriteLine("\nInitializing pak file...");
 			PakFile pakfile = new PakFile(bsp, sourceDirectories, includeFiles, excludeFiles, excludeDirs, excludeVpkFiles, outputFile, noswvtx);
@@ -125,50 +120,16 @@ namespace BSPPackStandalone
 			Console.WriteLine("Finished!");			
 		}
 		
-		static void SetPaths(bool reset)
-		{
-			if(Environment.GetEnvironmentVariable("GamePath", EnvironmentVariableTarget.User) == null || reset)		
-			{
-				string path;
-				do
-				{
-					Console.Write("Provide a path to game folder ( folder which contains gameinfo.txt ): ");
-					path = Console.ReadLine();
-					string gameinfo = Path.Combine(path,"gameinfo.txt");
-					if(!File.Exists(gameinfo))
-						Console.Write("gameinfo.txt is not present in provided location.\n");
-				} 
-				while(!File.Exists(Path.Combine(path,"gameinfo.txt")));
-				
-				Environment.SetEnvironmentVariable("GamePath", path, EnvironmentVariableTarget.User);
-			}
-			
-			if(Environment.GetEnvironmentVariable("Steam", EnvironmentVariableTarget.User) == null || reset)		
-			{
-				string path;
-				do
-				{
-					Console.Write("Provide a path to default Steam folder: ");
-					path = Console.ReadLine();
-					string steamapps = Path.Combine(path,"steamapps");
-					if(!Directory.Exists(steamapps))
-						Console.Write("steamapps folder is not present in provided location.\n");
-				} 
-				while(!Directory.Exists(Path.Combine(path,"steamapps")));
-				
-				Environment.SetEnvironmentVariable("Steam", path, EnvironmentVariableTarget.User);
-			}
-		}
-		static void LoadPathsFromFile()
+		static void LoadPathsFromFile(string filePath)
 		{		
-			if (!File.Exists("config.ini"))
+			if (!File.Exists(filePath))
 			{
-				Console.WriteLine($"config.ini not found, run 'bspPack --modify' to create it");
+				Console.WriteLine($"{filePath} not found, run 'bspPack --modify' to create it");
 				System.Environment.Exit(1);
 			}
 
 			string currentSection = "";
-			foreach (var line in File.ReadLines("config.ini"))
+			foreach (var line in File.ReadLines(filePath))
 			{
 				if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#"))
 					continue;
@@ -222,40 +183,6 @@ namespace BSPPackStandalone
 						excludeVpkFiles.Add(trimmedLine);
 						break;
 				}
-			}
-		}
-		
-		static void CreateDefaultConfigFile()
-		{
-			if (File.Exists("config.ini"))
-			{
-				Console.WriteLine("Configuration file already exists.");
-				return;
-			}
-
-			var lines = new List<string>
-			{
-				"# One path per line",
-				"[IncludeFiles]",
-				"",
-				"[IncludeDirs]",
-				"",
-				"[ExcludeFiles]",
-				"",
-				"[ExcludeDirs]",
-				"",
-				"[ExcludeVpkFiles]",
-				""
-			};
-
-			try
-			{
-				File.WriteAllLines("config.ini", lines);
-				Console.WriteLine($"Default configuration file has been created.");
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"Error creating configuration file: {ex.Message}");
 			}
 		}
 		

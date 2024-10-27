@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace BSPPackStandalone
 {
@@ -17,12 +18,124 @@ namespace BSPPackStandalone
 
 		public static void InitializeConfig()
 		{
-			// SteamAppsPath = GameFolder.Substring(0, GameFolder.IndexOf("steamapps") + 9);
-			BSPZip = Path.Combine(GameFolder, @"..\bin\win64", "bspzip.exe");
+			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+				BSPZip = Path.Combine(GameFolder, @"../bin/win64", "bspzip.exe");
+			else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+				BSPZip = Path.Combine(GameFolder, @"../bin/linux64", "bspzip");
+			
 			KeysFolder = Path.Combine(Directory.GetCurrentDirectory(), "Keys");
 			TempFolder = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
 			CopyLocation = Path.Combine(Directory.GetCurrentDirectory()); //Placeholder
 			VPK = Path.Combine(Directory.GetCurrentDirectory()); //Placeholder
+		}
+		
+		public static void CreateDefaultResourceConfigFile(string filePath)
+		{
+			if (File.Exists(filePath))
+			{
+				Console.WriteLine("Configuration file already exists.");
+				return;
+			}
+
+			var lines = new List<string>
+			{
+				"# One path per line",
+				"[IncludeFiles]",
+				"",
+				"[IncludeDirs]",
+				"",
+				"[ExcludeFiles]",
+				"",
+				"[ExcludeDirs]",
+				"",
+				"[ExcludeVpkFiles]",
+				""
+			};
+
+			try
+			{
+				File.WriteAllLines(filePath, lines);
+				Console.WriteLine($"Default resource configuration file has been created.");
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Error creating configuration file: {ex.Message}");
+			}
+		}
+		
+		
+		public static void LoadConfig(string filePath)
+		{
+			Console.WriteLine("Loading config.ini...");
+			if (!File.Exists(filePath))
+			{
+				CreateDefaultConfigFile(filePath);
+			}
+			
+			bool configLoaded = true;
+
+			string currentSection = "";
+			foreach (var line in File.ReadLines(filePath))
+			{
+				if (line.StartsWith("#"))
+				continue;
+
+				if (line.StartsWith("[") && line.EndsWith("]"))
+				{
+					currentSection = line.Trim('[', ']');
+					continue;
+				}
+
+			var trimmedLine = line.Trim().Trim('"');
+						Console.WriteLine(trimmedLine);
+				switch (currentSection)
+				{
+					case "GameFolder":
+						string gameinfo = Path.Combine(trimmedLine, "gameinfo.txt");
+						if (!File.Exists(gameinfo))
+						{
+							Console.WriteLine($"gameinfo.txt not found in provided game directory ( {trimmedLine} ).");
+							configLoaded = false;
+							break;
+						}
+						Console.WriteLine(trimmedLine);
+						Config.GameFolder = trimmedLine;
+						break;
+
+					case "SteamPath":
+						string steamapps = Path.Combine(trimmedLine, "steamapps");
+						if (!Directory.Exists(steamapps))
+						{
+							Console.WriteLine($"steamapps not found in provided Steam directory ( {trimmedLine} ).");
+							configLoaded = false;
+							break;
+						}
+						Console.WriteLine(steamapps);
+						Config.SteamAppsPath = steamapps;
+						break;
+				}
+			}
+			
+			if(!configLoaded)
+				Environment.Exit(1);
+			
+			InitializeConfig();
+		}
+		
+		private static void CreateDefaultConfigFile(string filePath)
+		{
+			var lines = new List<string>
+			{
+				"[GameFolder]",
+				"#Specify the path to the game folder here ( directory of gameinfo.txt )",
+				"",
+				"[SteamPath]",
+				"#Specify the path to the Steam folder here ( steam installation directory )",
+				""
+			};
+			File.WriteAllLines(filePath, lines);
+			Console.WriteLine($"Default configuration file created at {filePath}. Please provide paths to game and steam folders.");
+			Environment.Exit(1);
 		}
 	}
 }

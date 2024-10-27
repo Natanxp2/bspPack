@@ -985,7 +985,7 @@ namespace BSPPackStandalone
                         if (fullPath.Contains(("|gameinfo_path|")))
                         {
                             string newPath = searchPath.Replace("*", "").Replace("|gameinfo_path|", "");
-                            fullPath = System.IO.Path.GetFullPath(gamePath + "\\" + newPath.TrimEnd('\\'));
+                            fullPath = System.IO.Path.GetFullPath(gamePath + Path.DirectorySeparatorChar + newPath.TrimEnd(Path.DirectorySeparatorChar));
                         }
                         if (Path.IsPathRooted(fullPath.Replace("*", "")))
                         {
@@ -994,7 +994,7 @@ namespace BSPPackStandalone
                         else
                         {
                             string newPath = fullPath.Replace("*", "");
-                            fullPath = System.IO.Path.GetFullPath(rootPath + "\\" + newPath.TrimEnd('\\'));
+                            fullPath = System.IO.Path.GetFullPath(rootPath + Path.DirectorySeparatorChar + newPath.TrimEnd(Path.DirectorySeparatorChar));
                         }
 
                         if (verbose)
