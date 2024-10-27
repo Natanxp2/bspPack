@@ -95,8 +95,7 @@ namespace BSPPackStandalone
                     bsp.Seek(offsets[0].Key, SeekOrigin.Begin);
                     if (reader.ReadChars(4).SequenceEqual("LZMA".ToCharArray()))
                     {
-						Console.WriteLine("Compressed BSPs are not supported!");
-                        System.Environment.Exit(1);
+						throw new FormatException("BSP is compressed. Trying to decompress...");
                     }
 
                     buildEntityList(bsp, reader);
@@ -178,7 +177,7 @@ namespace BSPPackStandalone
             {
                 if (TextureList[i].StartsWith("/")) // materials in root level material directory start with /
 					//For some reason some texture names are converted to upper case in the bsp. 
-					//Since linux pathnames are case sensitive the only solution I found so far is to normalize them to lowercase 
+					//Since linux pathnames are case sensitive the only solution I found so far is to normalize them to lower case 
                     TextureList[i] = "materials" + TextureList[i].ToLower() + ".vmt";
                 else
                     TextureList[i] = "materials/" + TextureList[i].ToLower() + ".vmt";

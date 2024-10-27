@@ -78,7 +78,7 @@ namespace BSPPackStandalone
 
 			Console.WriteLine("Reading BSP...");
 			FileInfo fileInfo = new FileInfo(Config.BSPFile);
-			BSP bsp = new BSP(fileInfo);
+			BSP bsp = LoadBSP(fileInfo);
 			
 			string unpackDir = Path.Combine(Config.TempFolder, Guid.NewGuid().ToString());
 			AssetUtils.UnpackBSP(unpackDir);
@@ -118,6 +118,32 @@ namespace BSPPackStandalone
 			}
 			
 			Console.WriteLine("Finished!");			
+		}
+		
+		static BSP LoadBSP(FileInfo fileInfo)
+		{
+			bool attempt = false;
+				
+			while (true)
+			{
+				try
+				{
+					BSP bsp = new BSP(fileInfo);
+					Console.WriteLine("BSP decompressed!");
+					return bsp; // Successful return
+				}
+				catch (Exception ex)
+				{
+					if (attempt)
+					{
+						Console.WriteLine("Decompression failed, exiting.");
+						return null; // Indicate failure by returning null
+					}
+					Console.WriteLine($"{ex.Message}");
+					CompressBSP(true);
+					attempt = true; // Mark that an attempt has been made
+				}
+			}
 		}
 		
 		static void LoadPathsFromFile(string filePath)
@@ -232,9 +258,15 @@ namespace BSPPackStandalone
 
 		}
 		
-		static void CompressBSP()
+		static void CompressBSP(bool decompress = false)
 		{
-			string arguments = "-repack -compress \"$bspnew\"";
+			string arguments;
+			
+			if(decompress)
+				arguments = "-repack \"$bspnew\"";
+			else
+				arguments = "-repack -compress \"$bspnew\"";
+			
 			arguments = arguments.Replace("$bspnew", Config.BSPFile);
 
 			var startInfo = new ProcessStartInfo(Config.BSPZip, arguments)
