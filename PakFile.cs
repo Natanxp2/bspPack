@@ -28,14 +28,13 @@ namespace BSPPackStandalone
         // onFailure is for utility files such as nav, radar, etc which get excluded. if they are excluded, the Delegate is run. This is used for removing the files from the BSP class, so they dont appear in the summary at the end
         private bool AddFile(KeyValuePair<string, string> paths, Action<BSP>? onExcluded = null, BSP? bsp = null)
         {
-            var externalPath = paths.Value;
-
+            var externalPath = paths.Value.Replace('\\', '/');
             // exclude files that are excluded
             if (externalPath != "" && File.Exists(externalPath)
-                                   && !excludedFiles.Contains(externalPath.ToLower()) // && !excludedFiles.Contains(externalPath.ToLower().Replace('/', '\\'))
-                                   && !excludedDirs.Any(externalPath.ToLower().StartsWith) // && !excludedDirs.Any(externalPath.ToLower().Replace('/', '\\').StartsWith)
-                                   && !excludedVpkFiles.Contains(paths.Key.ToLower()))// && !excludedVpkFiles.Contains(paths.Key.ToLower().Replace('\\', '/')))
-            {
+                                   && !excludedFiles.Any(file => file.Equals(externalPath, StringComparison.OrdinalIgnoreCase))
+								   && !excludedDirs.Any(dir => externalPath.StartsWith(dir, StringComparison.OrdinalIgnoreCase))
+								   && !excludedVpkFiles.Any(vpkFile => vpkFile.Equals(paths.Key, StringComparison.OrdinalIgnoreCase)))
+            {	
                 Files.Add(paths);
                 return true;
             }

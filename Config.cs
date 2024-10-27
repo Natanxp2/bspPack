@@ -33,7 +33,7 @@ namespace BSPPackStandalone
 		{
 			if (File.Exists(filePath))
 			{
-				Console.WriteLine("Configuration file already exists.");
+				Console.WriteLine("ResourceConfig.ini already exists.");
 				return;
 			}
 
@@ -55,7 +55,7 @@ namespace BSPPackStandalone
 			try
 			{
 				File.WriteAllLines(filePath, lines);
-				Console.WriteLine($"Default resource configuration file has been created.");
+				Console.WriteLine($"Default ResourceConfig.ini file has been created.");
 			}
 			catch (Exception ex)
 			{
@@ -87,7 +87,6 @@ namespace BSPPackStandalone
 				}
 
 			var trimmedLine = line.Trim().Trim('"');
-						Console.WriteLine(trimmedLine);
 				switch (currentSection)
 				{
 					case "GameFolder":
@@ -98,7 +97,6 @@ namespace BSPPackStandalone
 							configLoaded = false;
 							break;
 						}
-						Console.WriteLine(trimmedLine);
 						Config.GameFolder = trimmedLine;
 						break;
 
@@ -110,7 +108,6 @@ namespace BSPPackStandalone
 							configLoaded = false;
 							break;
 						}
-						Console.WriteLine(steamapps);
 						Config.SteamAppsPath = steamapps;
 						break;
 				}

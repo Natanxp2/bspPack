@@ -30,21 +30,30 @@ namespace BSPPackStandalone
 		private static bool dryrun;
 		private static bool renamenav;
 		private static bool noswvtx;
-		private static bool genParticleManifest;
+		private static bool particlemanifest;
 		private static bool compress;
-		private static bool reset;
 		private static bool modify;
 		
 		static void Main(string[] args)
 		{
-			reset = args.Contains("--reset");
 			modify = args.Contains("--modify");
 		
 			Config.LoadConfig("config.ini");
 			
 			if (args.Length == 0)
 			{
-				Console.WriteLine("Please provide a path to the BSP file.");
+				string helpMessage = @"
+Please provide path to BSP.
+## Flags
+--verbose            Outputs a complete listing of added assets
+--dryrun             Creates a txt file for bspzip usage but does not pack
+--renamenav          Renames the nav file to embed.nav
+--noswvtx            Skips packing unused .sw.vtx files to save filesize
+--particlemanifest   Generates a particle manifest based on particles used
+--compress           Compresses the BSP after packing
+--modify             Replaces --include, --includeDir, --exclude, --excludeDir, and --excludeVpk flags from CompilePal.
+";
+				Console.WriteLine(helpMessage);
 				return;
 			}
 			
@@ -52,8 +61,6 @@ namespace BSPPackStandalone
 			
 			if (!File.Exists(Config.BSPFile))
 			{	
-				if(reset)
-					return;
 				if(modify)
 				{
 					Config.CreateDefaultResourceConfigFile("ResourceConfig.ini");
@@ -73,7 +80,7 @@ namespace BSPPackStandalone
 			dryrun = args.Contains("--dryrun");
 			renamenav = args.Contains("--renamenav");
 			noswvtx = args.Contains("--noswvtx");
-			genParticleManifest = args.Contains("--genParticleManifest");
+			particlemanifest = args.Contains("--particlemanifest");
 			compress = args.Contains("--compress");
 
 			Console.WriteLine("Reading BSP...");
@@ -91,6 +98,9 @@ namespace BSPPackStandalone
 			if(dryrun) 
 				outputFile = $"BSPZipFiles/{Path.GetFileNameWithoutExtension(bsp.file.FullName)}_files.txt";
 			
+			if(includeDirs.Count != 0)
+				GetFilesFromIncludedDirs();
+			
 			Console.WriteLine("\nInitializing pak file...");
 			PakFile pakfile = new PakFile(bsp, sourceDirectories, includeFiles, excludeFiles, excludeDirs, excludeVpkFiles, outputFile, noswvtx);
 			Console.WriteLine("Writing file list...");
@@ -102,7 +112,7 @@ namespace BSPPackStandalone
 				return;
 			}
 			
-			if(genParticleManifest)
+			if(particlemanifest)
 			{
 				ParticleManifest manifest = new ParticleManifest(sourceDirectories, excludeDirs, excludeFiles, bsp, Config.BSPFile, Config.GameFolder);
 				bsp.particleManifest = manifest.particleManifest;
@@ -129,19 +139,18 @@ namespace BSPPackStandalone
 				try
 				{
 					BSP bsp = new BSP(fileInfo);
-					Console.WriteLine("BSP decompressed!");
-					return bsp; // Successful return
+					return bsp;
 				}
 				catch (Exception ex)
 				{
 					if (attempt)
 					{
 						Console.WriteLine("Decompression failed, exiting.");
-						return null; // Indicate failure by returning null
+						return null;
 					}
 					Console.WriteLine($"{ex.Message}");
 					CompressBSP(true);
-					attempt = true; // Mark that an attempt has been made
+					attempt = true;
 				}
 			}
 		}
@@ -190,7 +199,8 @@ namespace BSPPackStandalone
 							Console.WriteLine($"Could not find file {trimmedLine}");
 							break;
 						}	
-						excludeFiles.Add(trimmedLine);
+						Console.WriteLine($"EXCLUDED FILE: {trimmedLine.Replace('\\','/')}");
+						excludeFiles.Add(trimmedLine.Replace("\\","/"));
 						break;
 					case "ExcludeDirs":
 						if(!Directory.Exists(trimmedLine))
@@ -198,7 +208,7 @@ namespace BSPPackStandalone
 							Console.WriteLine($"Could not find directory {trimmedLine}");
 							break;
 						}
-						excludeDirs.Add(trimmedLine);						
+						excludeDirs.Add(trimmedLine.Replace("\\","/"));						
 						break;
 					case "ExcludeVpkFiles":
 						if(!File.Exists(trimmedLine))
@@ -210,6 +220,18 @@ namespace BSPPackStandalone
 						break;
 				}
 			}
+		}
+		
+		static void GetFilesFromIncludedDirs()
+		{
+			foreach (string dir in includeDirs)
+			{
+				var files = Directory.GetFiles(dir, "*", SearchOption.AllDirectories);
+				foreach (var file in files)
+				{
+					includeFiles.Add(file);
+				}
+			}		
 		}
 		
 		static void PackBSP(string outputFile)
