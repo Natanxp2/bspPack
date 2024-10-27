@@ -32,9 +32,9 @@ namespace BSPPackStandalone
 
             // exclude files that are excluded
             if (externalPath != "" && File.Exists(externalPath)
-                                   && !excludedFiles.Contains(externalPath.ToLower().Replace('/', '\\'))
-                                   && !excludedDirs.Any(externalPath.ToLower().Replace('/', '\\').StartsWith)
-                                   && !excludedVpkFiles.Contains(paths.Key.ToLower().Replace('\\', '/')))
+                                   && !excludedFiles.Contains(externalPath.ToLower()) // && !excludedFiles.Contains(externalPath.ToLower().Replace('/', '\\'))
+                                   && !excludedDirs.Any(externalPath.ToLower().StartsWith) // && !excludedDirs.Any(externalPath.ToLower().Replace('/', '\\').StartsWith)
+                                   && !excludedVpkFiles.Contains(paths.Key.ToLower()))// && !excludedVpkFiles.Contains(paths.Key.ToLower().Replace('\\', '/')))
             {
                 Files.Add(paths);
                 return true;
@@ -114,7 +114,7 @@ namespace BSPPackStandalone
                 return false;
             }
 
-            string internalPath = Regex.Replace(externalPath, Regex.Escape(baseDir + "\\"), "", RegexOptions.IgnoreCase);
+            string internalPath = Regex.Replace(externalPath, Regex.Escape(baseDir + Path.DirectorySeparatorChar), "", RegexOptions.IgnoreCase);
 
             AddGenericFile(internalPath, externalPath);
             return true;

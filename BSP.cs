@@ -177,9 +177,11 @@ namespace BSPPackStandalone
             for (int i = 0; i < TextureList.Count; i++)
             {
                 if (TextureList[i].StartsWith("/")) // materials in root level material directory start with /
-                    TextureList[i] = "materials" + TextureList[i] + ".vmt";
+					//For some reason some texture names are converted to upper case in the bsp. 
+					//Since linux pathnames are case sensitive the only solution I found so far is to normalize them to lowercase 
+                    TextureList[i] = "materials" + TextureList[i].ToLower() + ".vmt";
                 else
-                    TextureList[i] = "materials/" + TextureList[i] + ".vmt";
+                    TextureList[i] = "materials/" + TextureList[i].ToLower() + ".vmt";
             }
 
             // find skybox materials

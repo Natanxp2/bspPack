@@ -229,15 +229,15 @@ namespace BSPPackStandalone
                             {
                                 var damageModel1 = defaultsBlock["damage1"];
                                 if (damageModel1 is not null)
-                                    models.Add($"models\\{damageModel1}.mdl");
+                                    models.Add($"models{Path.DirectorySeparatorChar}{damageModel1}.mdl");
 
                                 var damageModel2 = defaultsBlock["damage2"];
                                 if (damageModel2 is not null)
-                                    models.Add($"models\\{damageModel2}.mdl");
+                                    models.Add($"models{Path.DirectorySeparatorChar}{damageModel2}.mdl");
 
                                 var damageModel3 = defaultsBlock["damage3"];
                                 if (damageModel3 is not null)
-                                    models.Add($"models\\{damageModel3}.mdl");
+                                    models.Add($"models{Path.DirectorySeparatorChar}{damageModel3}.mdl");
                             }
                         }
                     }
@@ -345,7 +345,7 @@ namespace BSPPackStandalone
 
                                 for (int j = 0; j < entry.Count(); j++)
                                     if (entry[j].Equals("\"model\"") || entry[j].Equals("\"ragdoll\""))
-                                        models.Add("models\\" + entry[j + 1].Trim('"') + (entry[j + 1].Trim('"').EndsWith(".mdl") ? "" : ".mdl"));
+                                        models.Add("models{Path.DirectorySeparatorChar}" + entry[j + 1].Trim('"') + (entry[j + 1].Trim('"').EndsWith(".mdl") ? "" : ".mdl"));
                             }
                         }
                     }
@@ -1027,7 +1027,7 @@ namespace BSPPackStandalone
                     {
                         try
                         {
-                            string fullPath = System.IO.Path.GetFullPath(rootPath + "\\" + searchPath.TrimEnd('\\'));
+                            string fullPath = System.IO.Path.GetFullPath(rootPath + Path.DirectorySeparatorChar + searchPath.TrimEnd(Path.DirectorySeparatorChar));
 
                             if (verbose)
 								Console.WriteLine("Found search path: {0}", fullPath);
@@ -1037,7 +1037,7 @@ namespace BSPPackStandalone
                         catch (Exception e)
                         {
 							Console.WriteLine("Failed to find search path: " + e);
-							Console.WriteLine($"Search path invalid: {rootPath + "\\" + searchPath.TrimEnd('\\')}");
+							Console.WriteLine($"Search path invalid: {rootPath + Path.DirectorySeparatorChar + searchPath.TrimEnd(Path.DirectorySeparatorChar)}");
                         }
                     }
                 }
