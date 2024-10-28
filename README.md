@@ -18,16 +18,15 @@ If compressed BSP is provided automatic decompression is attempted by running bs
 **`-N | --noswvtx`** - Skips packing unused .sw.vtx files to save filesize<br>
 **`-P | --particlemanifest`** - Generates a particle manifest based on particles used<br>
 **`-C | --compress`** - Compresses the BSP after packing<br>
-**`-M | --modify`** - Modify PakFile based on ResourceConfig.ini[^1]<br>
+**`-M | --modify`** - Modifies PakFile based on ResourceConfig.ini[^1]<br>
 **`-U | --unpack`** - Unpacks the BSP to **\<filename\>\_unpacked**<br>
 **`-S | --search`** - Searches **\/maps** folder of the game directory for the BSP file
 
-[^1]: Replaces --include, --includefilelist, --includeDir, --exclude, --excludeDir, and --excludeVpk flags from CompilePal
+[^1]: Replaces --include, --includefilelist, --includeDir, --includesourcedirectories, --exclude, --excludeDir, and --excludeVpk flags from CompilePal
 
 ## Missing functionality
 Support for renaming conflicting particle names<br>
 Packing VPK<br>
-Adding custom source directories<br>
 
 ## Linux problem
 For reaons I have not quite figured out yet some texture paths are stored in upper case in BSPs. <br>

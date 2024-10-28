@@ -22,9 +22,11 @@ namespace BSPPackStandalone
 		private static List<string> includeFiles = new List<string>();
 		private static List<string> includeFileLists = new List<string>();
 		private static List<string> includeDirs = new List<string>();
+		private static List<string> includeSourceDirectories = new List<string>();
 		private static List<string> excludeFiles = new List<string>();
 		private static List<string> excludeDirs = new List<string>();
 		private static List<string> excludeVpkFiles = new List<string>();
+
 		private static string outputFile = "BSPZipFiles/files.txt";
 		
 		private static bool verbose;
@@ -62,7 +64,7 @@ Please provide path to BSP.
 -N | --noswvtx            Skips packing unused .sw.vtx files to save filesize
 -P | --particlemanifest   Generates a particle manifest based on particles used
 -C | --compress           Compresses the BSP after packing
--M | --modify             Modify PakFile based on ResourceConfig.ini
+-M | --modify             Modifies PakFile based on ResourceConfig.ini
 -U | --unpack             Unpacks the BSP to <filename>_unpacked
 -S | --search             Searches /maps folder of the game directory for the BSP file
 ";
@@ -112,6 +114,31 @@ Please provide path to BSP.
 			
 			Console.WriteLine("\nLooking for search paths...");
 			sourceDirectories = AssetUtils.GetSourceDirectories(Config.GameFolder);
+			
+			if(includeSourceDirectories.Count != 0)
+			{
+				foreach (string dir in includeSourceDirectories)
+				{
+					string root = Directory.GetDirectoryRoot(dir);
+					var globOptions = Environment.OSVersion.Platform == PlatformID.Win32NT 
+						? GlobOptions.CaseInsensitive 
+						: GlobOptions.None;
+				  
+					var globResults = Glob.Directories(root, dir.Substring(root.Length), globOptions);
+					if(!globResults.Any())
+					{
+						Console.WriteLine($"Found no matching folders for: {dir}\n");
+						continue;
+					}
+				
+					foreach (string path in globResults)
+					{
+						sourceDirectories.Add(root + path);
+					}
+				
+				}
+			}
+			
 			AssetUtils.findBspUtilityFiles(bsp, sourceDirectories, renamenav, false);
 			
 			if(dryrun) 
@@ -149,6 +176,7 @@ Please provide path to BSP.
 			
 			if(dryrun)
 			{
+				Directory.Delete(Config.TempFolder, true);
 				Console.WriteLine($"Dry run finished! File saved to {outputFile}");
 				return;
 			}
@@ -243,6 +271,14 @@ Please provide path to BSP.
 						}	
 						includeDirs.Add(trimmedLine);
 						break;
+					case "IncludeSourceDirectories":
+						if(!Directory.Exists(trimmedLine))
+						{
+							Console.WriteLine($"Could not find directory {trimmedLine}");
+							break;
+						}	
+						includeSourceDirectories.Add(trimmedLine);
+						break;
 					case "ExcludeFiles":
 						if(!File.Exists(trimmedLine))
 						{
@@ -283,7 +319,7 @@ Please provide path to BSP.
 				}
 			}		
 		}
-			
+		
 		static void PackBSP(string outputFile)
 		{
 			string arguments = "-addlist \"$bspnew\"  \"$list\" \"$bspold\"";

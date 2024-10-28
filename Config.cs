@@ -46,6 +46,8 @@ namespace BSPPackStandalone
 				"",
 				"[IncludeDirs]",
 				"",
+				"[IncludeSourceDirectories]",
+				"",
 				"[ExcludeFiles]",
 				"",
 				"[ExcludeDirs]",
