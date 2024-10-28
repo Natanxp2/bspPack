@@ -42,6 +42,8 @@ namespace BSPPackStandalone
 				"# One path per line",
 				"[IncludeFiles]",
 				"",
+				"[IncludeFileLists]",
+				"",
 				"[IncludeDirs]",
 				"",
 				"[ExcludeFiles]",
@@ -49,7 +51,7 @@ namespace BSPPackStandalone
 				"[ExcludeDirs]",
 				"",
 				"[ExcludeVpkFiles]",
-				""
+				"",
 			};
 
 			try

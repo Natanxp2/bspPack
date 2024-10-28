@@ -20,6 +20,7 @@ namespace BSPPackStandalone
 		
 		private static List<string> sourceDirectories = new List<string>();
 		private static List<string> includeFiles = new List<string>();
+		private static List<string> includeFileLists = new List<string>();
 		private static List<string> includeDirs = new List<string>();
 		private static List<string> excludeFiles = new List<string>();
 		private static List<string> excludeDirs = new List<string>();
@@ -61,7 +62,7 @@ Please provide path to BSP.
 --noswvtx            Skips packing unused .sw.vtx files to save filesize
 --particlemanifest   Generates a particle manifest based on particles used
 --compress           Compresses the BSP after packing
---modify             Replaces --include, --includeDir, --exclude, --excludeDir, and --excludeVpk flags from CompilePal.
+--modify             Replaces --include, --includefilelist, --includeDir, --exclude, --excludeDir, and --excludeVpk flags from CompilePal.
 --unpack			 Unpacks the BSP to <filename>_unpacked
 --search			 Searches /maps folder of the game directory for the BSP file
 ";
@@ -121,6 +122,28 @@ Please provide path to BSP.
 			
 			Console.WriteLine("\nInitializing pak file...");
 			PakFile pakfile = new PakFile(bsp, sourceDirectories, includeFiles, excludeFiles, excludeDirs, excludeVpkFiles, outputFile, noswvtx);
+			
+			if(includeFileLists.Count != 0)
+			{
+				foreach( string file in includeFileLists )
+				{
+					Console.WriteLine($"Adding files from list: {file}");
+					var fileList = File.ReadAllLines(file);
+				
+					// file list format is internal path, newline, external path
+                        for (int i = 0; i < fileList.Length - 1; i += 2)
+                        {
+                            var internalPath = fileList[i];
+                            var externalPath = fileList[i + 1];
+                            if (!pakfile.AddInternalFile(internalPath, externalPath))
+                            {
+                                Console.WriteLine($"Failed to pack {externalPath}. This may indicate a duplicate file");
+                            }
+                        }
+					Console.WriteLine($"Added {fileList.Length / 2} files from {file}");	
+				}
+			}
+
 			Console.WriteLine("Writing file list...");
 			pakfile.OutputToFile();
 			
@@ -204,6 +227,14 @@ Please provide path to BSP.
 						}	
 						includeFiles.Add(trimmedLine);
 						break;
+					case "IncludeFileLists":
+						if(!File.Exists(trimmedLine))
+						{
+							Console.WriteLine($"Could not find file {trimmedLine}");
+							break;
+						}
+						includeFileLists.Add(trimmedLine);
+						break;
 					case "IncludeDirs":
 						if(!Directory.Exists(trimmedLine))
 						{
@@ -252,7 +283,7 @@ Please provide path to BSP.
 				}
 			}		
 		}
-		
+			
 		static void PackBSP(string outputFile)
 		{
 			string arguments = "-addlist \"$bspnew\"  \"$list\" \"$bspold\"";
