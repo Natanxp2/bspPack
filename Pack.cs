@@ -127,6 +127,7 @@ Please provide path to BSP.
 				CompressBSP();
 			}
 			
+			Directory.Delete(Config.TempFolder, true);		
 			Console.WriteLine("Finished!");			
 		}
 		
