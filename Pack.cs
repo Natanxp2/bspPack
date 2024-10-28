@@ -33,10 +33,20 @@ namespace BSPPackStandalone
 		private static bool particlemanifest;
 		private static bool compress;
 		private static bool modify;
+		private static bool unpack;
+		private static bool search;
 		
 		static void Main(string[] args)
 		{
+			verbose = args.Contains("--verbose");
+			dryrun = args.Contains("--dryrun");
+			renamenav = args.Contains("--renamenav");
+			noswvtx = args.Contains("--noswvtx");
+			particlemanifest = args.Contains("--particlemanifest");
+			compress = args.Contains("--compress");
+			unpack = args.Contains("--unpack");
 			modify = args.Contains("--modify");
+			search = args.Contains("--search");
 		
 			Config.LoadConfig("config.ini");
 			
@@ -52,13 +62,18 @@ Please provide path to BSP.
 --particlemanifest   Generates a particle manifest based on particles used
 --compress           Compresses the BSP after packing
 --modify             Replaces --include, --includeDir, --exclude, --excludeDir, and --excludeVpk flags from CompilePal.
+--unpack			 Unpacks the BSP to <filename>_unpacked
+--search			 Searches /maps folder of the game directory for the BSP file
 ";
 				Console.WriteLine(helpMessage);
 				return;
 			}
 			
-			Config.BSPFile = args[^1];
-			
+			if(search)
+				Config.BSPFile = Path.Combine(Config.GameFolder, "maps", args[^1]);
+			else
+				Config.BSPFile = args[^1];
+				
 			if (!File.Exists(Config.BSPFile))
 			{	
 				if(modify)
@@ -76,18 +91,21 @@ Please provide path to BSP.
 			if(modify)
 				LoadPathsFromFile("ResourceConfig.ini");
 			
-			verbose = args.Contains("--verbose");
-			dryrun = args.Contains("--dryrun");
-			renamenav = args.Contains("--renamenav");
-			noswvtx = args.Contains("--noswvtx");
-			particlemanifest = args.Contains("--particlemanifest");
-			compress = args.Contains("--compress");
-
 			Console.WriteLine("Reading BSP...");
 			FileInfo fileInfo = new FileInfo(Config.BSPFile);
 			BSP bsp = LoadBSP(fileInfo);
 			
-			string unpackDir = Path.Combine(Config.TempFolder, Guid.NewGuid().ToString());
+			string unpackDir;
+			
+			if(unpack)
+			{
+				unpackDir = Path.Combine(Directory.GetCurrentDirectory(),Path.GetFileNameWithoutExtension(bsp.file.FullName) + "_unpacked");
+				AssetUtils.UnpackBSP(unpackDir);
+				Console.WriteLine($"BSP unpacked to: {unpackDir}");
+				return;
+			}
+			
+			unpackDir = Path.Combine(Config.TempFolder, Guid.NewGuid().ToString());
 			AssetUtils.UnpackBSP(unpackDir);
 			AssetUtils.findBspPakDependencies(bsp, unpackDir);
 			
