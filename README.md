@@ -12,18 +12,21 @@ If compressed BSP is provided automatic decompression is attempted by running bs
 
 ## Flags
 
-**--verbose** - Outputs a complete listing of added assets<br>
-**--dryrun** - Creates a txt file for bspzip usage but does not pack<br>
-**--renamenav** - Renames the nav file to embed.nav<br>
-**--noswvtx** - Skips packing unused .sw.vtx files to save filesize<br>
-**--particlemanifest** - Generates a particle manifest based on particles used<br>
-**--compress** - Compresses the BSP after packing<br>
-**--modify** - Replaces --include, --includeDir, --exclude, --excludeDir, and --excludeVpk flags from CompilePal<br>
+**`-V | --verbose`** - Outputs a complete listing of added assets<br>
+**`-D | --dryrun`** - Creates a txt file for bspzip usage but does not pack<br>
+**`-R | --renamenav`** - Renames the nav file to embed.nav<br>
+**`-N | --noswvtx`** - Skips packing unused .sw.vtx files to save filesize<br>
+**`-P | --particlemanifest`** - Generates a particle manifest based on particles used<br>
+**`-C | --compress`** - Compresses the BSP after packing<br>
+**`-M | --modify`** - Modify PakFile based on ResourceConfig.ini[^1]<br>
+**`-U | --unpack`** - Unpacks the BSP to **\<filename\>\_unpacked**<br>
+**`-S | --search`** - Searches **\/maps** folder of the game directory for the BSP file
+
+[^1]: Replaces --include, --includefilelist, --includeDir, --exclude, --excludeDir, and --excludeVpk flags from CompilePal
 
 ## Missing functionality
 Support for renaming conflicting particle names<br>
 Packing VPK<br>
-Including custom PakFile<br>
 Adding custom source directories<br>
 
 ## Linux problem
