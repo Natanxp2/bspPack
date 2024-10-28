@@ -39,15 +39,15 @@ namespace BSPPackStandalone
 		
 		static void Main(string[] args)
 		{
-			verbose = args.Contains("--verbose");
-			dryrun = args.Contains("--dryrun");
-			renamenav = args.Contains("--renamenav");
-			noswvtx = args.Contains("--noswvtx");
-			particlemanifest = args.Contains("--particlemanifest");
-			compress = args.Contains("--compress");
-			unpack = args.Contains("--unpack");
-			modify = args.Contains("--modify");
-			search = args.Contains("--search");
+			verbose = args.Contains("-V") || args.Contains("--verbose");
+			dryrun = args.Contains("-D") || args.Contains("--dryrun");
+			renamenav = args.Contains("-R") || args.Contains("--renamenav");
+			noswvtx = args.Contains("-N") || args.Contains("--noswvtx");
+			particlemanifest = args.Contains("-P") || args.Contains("--particlemanifest");
+			compress = args.Contains("-C") || args.Contains("--compress");
+			unpack = args.Contains("-U") || args.Contains("--unpack");
+			modify = args.Contains("-M") || args.Contains("--modify");
+			search = args.Contains("-S") || args.Contains("--search");
 		
 			Config.LoadConfig("config.ini");
 			
@@ -56,15 +56,15 @@ namespace BSPPackStandalone
 				string helpMessage = @"
 Please provide path to BSP.
 ## Flags
---verbose            Outputs a complete listing of added assets
---dryrun             Creates a txt file for bspzip usage but does not pack
---renamenav          Renames the nav file to embed.nav
---noswvtx            Skips packing unused .sw.vtx files to save filesize
---particlemanifest   Generates a particle manifest based on particles used
---compress           Compresses the BSP after packing
---modify             Replaces --include, --includefilelist, --includeDir, --exclude, --excludeDir, and --excludeVpk flags from CompilePal.
---unpack			 Unpacks the BSP to <filename>_unpacked
---search			 Searches /maps folder of the game directory for the BSP file
+-V | --verbose            Outputs a complete listing of added assets
+-D | --dryrun             Creates a txt file for bspzip usage but does not pack
+-R | --renamenav          Renames the nav file to embed.nav
+-N | --noswvtx            Skips packing unused .sw.vtx files to save filesize
+-P | --particlemanifest   Generates a particle manifest based on particles used
+-C | --compress           Compresses the BSP after packing
+-M | --modify             Modify PakFile based on ResourceConfig.ini
+-U | --unpack             Unpacks the BSP to <filename>_unpacked
+-S | --search             Searches /maps folder of the game directory for the BSP file
 ";
 				Console.WriteLine(helpMessage);
 				return;
