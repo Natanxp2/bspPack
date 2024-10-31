@@ -6,6 +6,7 @@ namespace BSPPackStandalone
 {
 	public static class Config
 	{
+		public static string ExeDirectory = AppContext.BaseDirectory;
 		public static string BSPFile { get; set; }
 		public static string GameFolder { get; set; } 
 		public static string SteamAppsPath { get; set; }

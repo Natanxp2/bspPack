@@ -51,7 +51,7 @@ namespace BSPPackStandalone
 			modify = args.Contains("-M") || args.Contains("--modify");
 			search = args.Contains("-S") || args.Contains("--search");
 		
-			Config.LoadConfig("config.ini");
+			Config.LoadConfig(Path.Combine(Config.ExeDirectory, "config.ini"));
 			
 			if (args.Length == 0)
 			{
@@ -81,7 +81,7 @@ Please provide path to BSP.
 			{	
 				if(modify)
 				{
-					Config.CreateDefaultResourceConfigFile("ResourceConfig.ini");
+					Config.CreateDefaultResourceConfigFile(Path.Combine(Config.ExeDirectory, "ResourceConfig.ini"));
 					return;
 				}
 				else
@@ -92,7 +92,7 @@ Please provide path to BSP.
 			}
 			
 			if(modify)
-				LoadPathsFromFile("ResourceConfig.ini");
+				LoadPathsFromFile(Path.Combine(Config.ExeDirectory, "ResourceConfig.ini"));
 			
 			Console.WriteLine("Reading BSP...");
 			FileInfo fileInfo = new FileInfo(Config.BSPFile);
