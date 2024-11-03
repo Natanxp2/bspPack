@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using ValveKeyValue;
 
 namespace BSPPackStandalone
 {
@@ -151,7 +152,8 @@ namespace BSPPackStandalone
                     {
                         if (s.Count() != 0)
                         {
-                            string[] c = s.Split('"');
+                            // split on non escaped quotes
+                            string[] c = Regex.Split(s, "(?<!\\\\)[\"\"]");
                             if (!entity.ContainsKey(c[1]))
                                 entity.Add(c[1], c[3]);
                             entityArrayFormat.Add(Tuple.Create(c[1], c[3]));
@@ -184,7 +186,7 @@ namespace BSPPackStandalone
             }
 
             // find skybox materials
-            Dictionary<string, string> worldspawn = entityList.First(item => item["classname"] == "worldspawn");
+            Dictionary<string, string> worldspawn = entityList.FirstOrDefault(item => item["classname"] == "worldspawn", new Dictionary<string, string>());
             if (worldspawn.ContainsKey("skyname"))
                 foreach (string s in new string[] { "", "bk", "dn", "ft", "lf", "rt", "up" })
                 {

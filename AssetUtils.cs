@@ -665,7 +665,7 @@ namespace BSPPackStandalone
             }
 
             // detail file (.vbsp)
-            Dictionary<string, string> worldspawn = bsp.entityList.First(item => item["classname"] == "worldspawn");
+            Dictionary<string, string> worldspawn = bsp.entityList.FirstOrDefault(item => item["classname"] == "worldspawn", new Dictionary<string, string>());
             if (worldspawn.ContainsKey("detailvbsp"))
             {
                 internalPath = worldspawn["detailvbsp"];
