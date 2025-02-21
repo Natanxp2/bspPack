@@ -64,9 +64,9 @@ namespace BSPPackStandalone
                     int textureNameOffset = reader.ReadInt32();
 
                     mdl.Seek(textureOffset + (i * 64) + textureNameOffset, SeekOrigin.Begin);
+
                     modelVmts.Add(readNullTerminatedString(mdl, reader));
                 }
-
                 // find model dirs
                 List<int> textureDirOffsets = new List<int>();
                 for (int i = 0; i < textureDirCount; i++)
@@ -77,6 +77,7 @@ namespace BSPPackStandalone
 
                     string model = readNullTerminatedString(mdl, reader);
                     model = model.TrimStart(new char[] { '/', '\\' });
+                    model = model.Replace('\\', '/');
                     modelDirs.Add(model);
                 }
 
@@ -147,11 +148,10 @@ namespace BSPPackStandalone
                                 materials.Add("materials/" + modelDirs[k] + modelVmts[id] + ".vmt");
                             }
                 }
-                else
-                    // load all vmts
-                    for (int i = 0; i < modelVmts.Count; i++)
-                        for (int j = 0; j < modelDirs.Count; j++)
-                            materials.Add("materials/" + modelDirs[j] + modelVmts[i] + ".vmt");
+                // load all vmts
+                for (int i = 0; i < modelVmts.Count; i++)
+                    for (int j = 0; j < modelDirs.Count; j++)
+                        materials.Add("materials/" + modelDirs[j] + modelVmts[i] + ".vmt");
 
                 // add materials found in vtx file
                 for (int i = 0; i < vtxVmts.Count; i++)
