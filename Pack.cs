@@ -27,7 +27,7 @@ namespace BSPPackStandalone
 		private static List<string> excludeDirs = new List<string>();
 		private static List<string> excludeVpkFiles = new List<string>();
 
-		private static string outputFile = "BSPZipFiles/files.txt";
+		private static string outputFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BSPZipFiles/files.txt");
 		
 		private static bool verbose;
 		private static bool dryrun;
@@ -102,7 +102,7 @@ Please provide path to BSP.
 			
 			if(unpack)
 			{
-				unpackDir = Path.Combine(Directory.GetCurrentDirectory(),Path.GetFileNameWithoutExtension(bsp.file.FullName) + "_unpacked");
+				unpackDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Path.GetFileNameWithoutExtension(bsp.file.FullName) + "_unpacked");
 				AssetUtils.UnpackBSP(unpackDir);
 				Console.WriteLine($"BSP unpacked to: {unpackDir}");
 				return;
@@ -142,7 +142,7 @@ Please provide path to BSP.
 			AssetUtils.findBspUtilityFiles(bsp, sourceDirectories, renamenav, false);
 			
 			if(dryrun) 
-				outputFile = $"BSPZipFiles/{Path.GetFileNameWithoutExtension(bsp.file.FullName)}_files.txt";
+				outputFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BSPZipFiles", $"{Path.GetFileNameWithoutExtension(bsp.file.FullName)}_files.txt");
 			
 			if(includeDirs.Count != 0)
 				GetFilesFromIncludedDirs();

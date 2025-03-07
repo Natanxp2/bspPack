@@ -257,8 +257,8 @@ namespace BSPPackStandalone
                 outputLines.Add(entry.Value);
             }
 
-            if (!Directory.Exists("BSPZipFiles"))
-                Directory.CreateDirectory("BSPZipFiles");
+            if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BSPZipFiles")))
+                Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BSPZipFiles"));
 
             if (File.Exists(fileName))
                 File.Delete(fileName);
@@ -293,9 +293,7 @@ namespace BSPPackStandalone
         public void AddModel(string internalPath, List<int> skins = null)
         {
             // adds mdl files and finds its dependencies
-			Console.WriteLine($"Packing model: {internalPath}");
             string externalPath = FindExternalFile(internalPath);
-			Console.WriteLine($"External path: {internalPath}");
             if (AddInternalFile(internalPath, externalPath))
             {
                 mdlcount++;

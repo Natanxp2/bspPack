@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using ValveKeyValue;
 
 namespace BSPPackStandalone
@@ -65,7 +66,16 @@ namespace BSPPackStandalone
 
                     mdl.Seek(textureOffset + (i * 64) + textureNameOffset, SeekOrigin.Begin);
 
-                    modelVmts.Add(readNullTerminatedString(mdl, reader));
+                    string texture = readNullTerminatedString(mdl, reader);
+
+                    if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)){
+                        if(texture.Any(char.IsUpper)){
+                            Console.WriteLine("\u001b[33m\nWARNING: Model " + texture + " references it's vmt file using uppercase; however, on Linux/macOS, all filenames are assumed to be lowercase.\nIf it doesn't pack correctly, please change the filename of the vmt to lowercase.\n\u001b[0m");
+                        }
+                        texture = texture.ToLower();
+                    }
+
+                    modelVmts.Add(texture);
                 }
                 // find model dirs
                 List<int> textureDirOffsets = new List<int>();

@@ -24,10 +24,10 @@ namespace BSPPackStandalone
 			else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
 				BSPZip = Path.Combine(GameFolder, @"../bin/linux64", "bspzip");
 			
-			KeysFolder = Path.Combine(Directory.GetCurrentDirectory(), "Keys");
-			TempFolder = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
-			CopyLocation = Path.Combine(Directory.GetCurrentDirectory()); //Placeholder
-			VPK = Path.Combine(Directory.GetCurrentDirectory()); //Placeholder
+			KeysFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Keys");
+			TempFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Temp");
+			CopyLocation = Path.Combine(AppDomain.CurrentDomain.BaseDirectory); //Placeholder
+			VPK = Path.Combine(AppDomain.CurrentDomain.BaseDirectory); //Placeholder
 		}
 		
 		public static void CreateDefaultResourceConfigFile(string filePath)
