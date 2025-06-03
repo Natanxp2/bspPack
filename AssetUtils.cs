@@ -495,7 +495,7 @@ namespace BSPPackStandalone
                 line = line.Remove(0, "materials/".Length); // removes materials/ if its the beginning of the string for consistency
             if (line.EndsWith(".vmt") || line.EndsWith(".vtf")) // removes extentions if present for consistency
                 line = line.Substring(0, line.Length - 4);
-            return line;
+            return line.ToLower();
         }
 
         public static List<string> findSoundscapeSounds(string fullpath)
