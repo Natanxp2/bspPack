@@ -8,14 +8,14 @@ using ValveKeyValue;
 
 namespace BSPPackStandalone
 {
-	// this is the class that stores data about the bsp.
-	// You can find information about the file format here
-	// https://developer.valvesoftware.com/wiki/Source_BSP_File_Format#BSP_file_header
+    // this is the class that stores data about the bsp.
+    // You can find information about the file format here
+    // https://developer.valvesoftware.com/wiki/Source_BSP_File_Format#BSP_file_header
     class CompressedBSPException : Exception { }
 
     class BSP
     {
-		private KeyValuePair<int, int>[] offsets; // offset/length
+        private KeyValuePair<int, int>[] offsets; // offset/length
         private static readonly char[] SpecialCaracters = { '*', '#', '@', '>', '<', '^', '(', ')', '}', '$', '!', '?', ' ' };
 
         public List<Dictionary<string, string>> entityList { get; private set; }
@@ -43,7 +43,7 @@ namespace BSPPackStandalone
         public KeyValuePair<string, string> soundscape { get; set; }
         public KeyValuePair<string, string> detail { get; set; }
         public KeyValuePair<string, string> nav { get; set; }
-        public List<KeyValuePair<string, string>> res { get; } = new List<KeyValuePair<string, string>>();
+        public List<KeyValuePair<string, string>> res { get; } = [];
         public KeyValuePair<string, string> kv { get; set; }
         public KeyValuePair<string, string> txt { get; set; }
         public KeyValuePair<string, string> jpg { get; set; }
@@ -96,7 +96,7 @@ namespace BSPPackStandalone
                     bsp.Seek(offsets[0].Key, SeekOrigin.Begin);
                     if (reader.ReadChars(4).SequenceEqual("LZMA".ToCharArray()))
                     {
-						throw new FormatException("BSP is compressed. Trying to decompress...");
+                        throw new FormatException("BSP is compressed. Trying to decompress...");
                     }
 
                     buildEntityList(bsp, reader);
@@ -113,41 +113,41 @@ namespace BSPPackStandalone
 
         public void buildEntityList(FileStream bsp, BinaryReader reader)
         {
-            entityList = new List<Dictionary<string, string>>();
-            entityListArrayForm = new List<List<Tuple<string, string>>>();
+            entityList = [];
+            entityListArrayForm = [];
 
             bsp.Seek(offsets[0].Key, SeekOrigin.Begin);
             byte[] ent = reader.ReadBytes(offsets[0].Value);
-            List<byte> ents = new List<byte>();
+            List<byte> ents = [];
 
-	        const int LCURLY = 123;
-	        const int RCURLY = 125;
-	        const int NEWLINE = 10;
+            const int LCURLY = 123;
+            const int RCURLY = 125;
+            const int NEWLINE = 10;
 
             for (int i = 0; i < ent.Length; i++)
             {
-	            if (ent[i] == LCURLY && i + 1 < ent.Length)
-	            {
-		            // if curly isnt followed by newline assume its part of filename
-		            if (ent[i + 1] != NEWLINE)
-			            ents.Add(ent[i]);
-	            }
+                if (ent[i] == LCURLY && i + 1 < ent.Length)
+                {
+                    // if curly isnt followed by newline assume its part of filename
+                    if (ent[i + 1] != NEWLINE)
+                        ents.Add(ent[i]);
+                }
                 if (ent[i] != LCURLY && ent[i] != RCURLY)
-					ents.Add(ent[i]);
+                    ents.Add(ent[i]);
                 else if (ent[i] == RCURLY)
                 {
-					// if curly isnt followed by newline assume its part of filename
-	                if (i + 1 < ent.Length && ent[i + 1] != NEWLINE)
-	                {
-						ents.Add(ent[i]);
-						continue;
-	                }
+                    // if curly isnt followed by newline assume its part of filename
+                    if (i + 1 < ent.Length && ent[i + 1] != NEWLINE)
+                    {
+                        ents.Add(ent[i]);
+                        continue;
+                    }
 
 
-					string rawent = Encoding.ASCII.GetString(ents.ToArray());
+                    string rawent = Encoding.ASCII.GetString(ents.ToArray());
                     Dictionary<string, string> entity = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
                     var entityArrayFormat = new List<Tuple<string, string>>();
-					// split on \n, ignore \n inside of quotes
+                    // split on \n, ignore \n inside of quotes
                     foreach (string s in Regex.Split(rawent, "(?=(?:(?:[^\"]*\"){2})*[^\"]*$)\\n"))
                     {
                         if (s.Count() != 0)
@@ -161,7 +161,7 @@ namespace BSPPackStandalone
                     }
                     entityList.Add(entity);
                     entityListArrayForm.Add(entityArrayFormat);
-                    ents = new List<byte>();
+                    ents = [];
                 }
             }
         }
@@ -170,23 +170,33 @@ namespace BSPPackStandalone
         {
             // builds the list of textures applied to brushes
 
+            Regex patch_pattern = new Regex(@"^materials/maps/[^/]+/(.+)_wvt_patch.(vmt)$", RegexOptions.IgnoreCase);
+
             string mapname = bsp.Name.Split('\\').Last().Split('.')[0];
 
-            TextureList = new List<string>();
+            TextureList = [];
             bsp.Seek(offsets[43].Key, SeekOrigin.Begin);
             TextureList = new List<string>(Encoding.ASCII.GetString(reader.ReadBytes(offsets[43].Value)).Split('\0'));
             for (int i = 0; i < TextureList.Count; i++)
             {
                 if (TextureList[i].StartsWith("/")) // materials in root level material directory start with /
-					//For some reason some texture names are converted to upper case in the bsp. 
-					//Since linux pathnames are case sensitive the only solution I found so far is to normalize them to lower case 
+
+                    //For some reason some texture names are converted to upper case in the bsp. 
+                    //Since linux pathnames are case sensitive the only solution I found so far is to normalize them to lower case 
                     TextureList[i] = "materials" + TextureList[i].ToLower() + ".vmt";
                 else
                     TextureList[i] = "materials/" + TextureList[i].ToLower() + ".vmt";
+
+                // pack wvt (world vertex transition) patch materials. These are generated when blend textures are used on non displacement brushes and are renamed maps/{mapname}/{material_name}_wvt_patch.vmt
+                // https://github.com/ValveSoftware/source-sdk-2013/blob/a62efecf624923d3bacc67b8ee4b7f8a9855abfd/src/utils/vbsp/worldvertextransitionfixup.cpp#L47
+                if (patch_pattern.Match(TextureList[i]) is Match { Success: true } match)
+                {
+                    TextureList[i] = Path.Join("materials", $"{match.Groups[1].Value}.{match.Groups[2].Value}");
+                }
             }
 
             // find skybox materials
-            Dictionary<string, string> worldspawn = entityList.FirstOrDefault(item => item["classname"] == "worldspawn", new Dictionary<string, string>());
+            Dictionary<string, string> worldspawn = entityList.FirstOrDefault(item => item["classname"] == "worldspawn", []);
             if (worldspawn.ContainsKey("skyname"))
                 foreach (string s in new string[] { "", "bk", "dn", "ft", "lf", "rt", "up" })
                 {
@@ -206,8 +216,8 @@ namespace BSPPackStandalone
         {
             // builds the list of textures referenced in entities
 
-            List<string> materials = new List<string>();
-            HashSet<string> skybox_swappers = new HashSet<string>();
+            List<string> materials = [];
+            HashSet<string> skybox_swappers = [];
 
             foreach (Dictionary<string, string> ent in entityList)
             {
@@ -222,13 +232,13 @@ namespace BSPPackStandalone
 
                 }
 
-                if(ent["classname"].Contains("skybox_swapper") && ent.ContainsKey("SkyboxName") )
+                if (ent["classname"].Contains("skybox_swapper") && ent.ContainsKey("SkyboxName"))
                 {
-                    if(ent.ContainsKey("targetname"))
+                    if (ent.ContainsKey("targetname"))
                     {
                         skybox_swappers.Add(ent["targetname"].ToLower());
                     }
-                    
+
                     foreach (string s in new string[] { "", "bk", "dn", "ft", "lf", "rt", "up" })
                     {
                         materials.Add("skybox/" + ent["SkyboxName"] + s + ".vmt");
@@ -238,7 +248,15 @@ namespace BSPPackStandalone
 
                 // special condition for sprites
                 if (ent["classname"].Contains("sprite") && ent.ContainsKey("model"))
-                    materials.Add(ent["model"]);
+                {
+                    var model = ent["model"];
+                    // strip leading materials folder
+                    if (model.StartsWith("materials/", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        model = model.Substring(10);
+                    }
+                    materials.Add(model);
+                }
 
                 // special condition for item_teamflag
                 if (ent["classname"].Contains("item_teamflag"))
@@ -257,13 +275,13 @@ namespace BSPPackStandalone
                     }
                 }
 
-				// special condition for env_funnel. Hardcoded to use sprites/flare6.vmt
-				if (ent["classname"].Contains("env_funnel"))
-					materials.Add("sprites/flare6.vmt");
+                // special condition for env_funnel. Hardcoded to use sprites/flare6.vmt
+                if (ent["classname"].Contains("env_funnel"))
+                    materials.Add("sprites/flare6.vmt");
 
-				// special condition for env_embers. Hardcoded to use particle/fire.vmt
-				if (ent["classname"].Contains("env_embers"))
-					materials.Add("particle/fire.vmt");
+                // special condition for env_embers. Hardcoded to use particle/fire.vmt
+                if (ent["classname"].Contains("env_embers"))
+                    materials.Add("particle/fire.vmt");
 
                 //special condition for func_dustcloud and func_dustmotes.  Hardcoded to use particle/sparkles.vmt
                 if (ent["classname"].StartsWith("func_dust"))
@@ -271,20 +289,20 @@ namespace BSPPackStandalone
 
                 // special condition for vgui_slideshow_display. directory paramater references all textures in a folder (does not include subfolders)
                 if (ent["classname"].Contains("vgui_slideshow_display"))
-	            {
-		            if (ent.ContainsKey("directory"))
-		            {
-						var directory = Path.Combine(Config.GameFolder, "materials", "vgui", ent["directory"]);
-			            if (Directory.Exists(directory))
-			            {
-				            foreach (var file in Directory.GetFiles(directory))
-				            {
-					            if (file.EndsWith(".vmt"))
-									materials.Add($"/vgui/{ent["directory"]}/{Path.GetFileName(file)}");
-				            }
-			            }
-					}
-	            }
+                {
+                    if (ent.ContainsKey("directory"))
+                    {
+                        var directory = Path.Combine(Config.GameFolder, "materials", "vgui", ent["directory"]);
+                        if (Directory.Exists(directory))
+                        {
+                            foreach (var file in Directory.GetFiles(directory))
+                            {
+                                if (file.EndsWith(".vmt"))
+                                    materials.Add($"/vgui/{ent["directory"]}/{Path.GetFileName(file)}");
+                            }
+                        }
+                    }
+                }
 
             }
 
@@ -297,34 +315,35 @@ namespace BSPPackStandalone
                     var io = ParseIO(prop.Item2);
                     if (io == null)
                         continue;
-                    
+
 
                     var (target, command, parameter) = io;
 
-                    switch (command) {
+                    switch (command)
+                    {
                         case "SetCountdownImage":
                             materials.Add($"vgui/{parameter}");
                             break;
                         case "Command":
                             // format of Command is <command> <parameter>
-                            if(!parameter.Contains(' '))
+                            if (!parameter.Contains(' '))
                             {
                                 continue;
                             }
-                            (command, parameter) = parameter.Split(' ') switch { var param => (param[0], param[1])};
+                            (command, parameter) = parameter.Split(' ') switch { var param => (param[0], param[1]) };
                             if (command == "r_screenoverlay")
                                 materials.Add(parameter);
                             break;
                         case "AddOutput":
-                            if(!parameter.Contains(' '))
+                            if (!parameter.Contains(' '))
                             {
                                 continue;
                             }
                             string k, v;
-                            (k,v) = parameter.Split(' ') switch { var a => (a[0], a[1])};
+                            (k, v) = parameter.Split(' ') switch { var a => (a[0], a[1]) };
 
                             // support packing mats when using addoutput to change skybox_swappers
-                            if(skybox_swappers.Contains(target.ToLower()) && k.ToLower() == "skyboxname")
+                            if (skybox_swappers.Contains(target.ToLower()) && k.ToLower() == "skyboxname")
                             {
                                 foreach (string s in new string[] { "", "bk", "dn", "ft", "lf", "rt", "up" })
                                 {
@@ -338,7 +357,7 @@ namespace BSPPackStandalone
             }
 
             // format and add materials
-            EntTextureList = new List<string>();
+            EntTextureList = [];
             foreach (string material in materials)
             {
                 string materialpath = material;
@@ -353,7 +372,7 @@ namespace BSPPackStandalone
         {
             // builds the list of models that are from prop_static
 
-            ModelList = new List<string>();
+            ModelList = [];
             // getting information on the gamelump
             int propStaticId = 0;
             bsp.Seek(offsets[35].Key, SeekOrigin.Begin);
@@ -402,7 +421,7 @@ namespace BSPPackStandalone
             modelSkinList = new List<int>[modelCount]; // stores the ids of used skins
 
             for (int i = 0; i < modelCount; i++)
-                modelSkinList[i] = new List<int>();
+                modelSkinList[i] = [];
 
             for (int i = 0; i < propCount; i++)
             {
@@ -421,32 +440,32 @@ namespace BSPPackStandalone
         {
             // builds the list of models referenced in entities
 
-            EntModelList = new List<string>();
-	        foreach (Dictionary<string, string> ent in entityList)
-	        {
-				foreach (KeyValuePair<string, string> prop in ent)
-				{
-					if (ent["classname"].StartsWith("func"))
-					{
-						if (prop.Key == "gibmodel")
-							EntModelList.Add(prop.Value);
-					}
-					else if (!ent["classname"].StartsWith("trigger") &&
-						!ent["classname"].Contains("sprite"))
-					{
-						if (Keys.vmfModelKeys.Contains(prop.Key))
-							EntModelList.Add(prop.Value);
-						// item_sodacan is hardcoded to models/can.mdl
-						// env_beverage spawns item_sodacans
-						else if (prop.Value == "item_sodacan" || prop.Value == "env_beverage")
-							EntModelList.Add("models/can.mdl");
-						// tf_projectile_throwable is hardcoded to models/props_gameplay/small_loaf.mdl
-						else if (prop.Value == "tf_projectile_throwable")
-							EntModelList.Add("models/props_gameplay/small_loaf.mdl");
-					}
+            EntModelList = [];
+            foreach (Dictionary<string, string> ent in entityList)
+            {
+                foreach (KeyValuePair<string, string> prop in ent)
+                {
+                    if (ent["classname"].StartsWith("func"))
+                    {
+                        if (prop.Key == "gibmodel")
+                            EntModelList.Add(prop.Value);
+                    }
+                    else if (!ent["classname"].StartsWith("trigger") &&
+                        !ent["classname"].Contains("sprite"))
+                    {
+                        if (Keys.vmfModelKeys.Contains(prop.Key))
+                            EntModelList.Add(prop.Value);
+                        // item_sodacan is hardcoded to models/can.mdl
+                        // env_beverage spawns item_sodacans
+                        else if (prop.Value == "item_sodacan" || prop.Value == "env_beverage")
+                            EntModelList.Add("models/can.mdl");
+                        // tf_projectile_throwable is hardcoded to models/props_gameplay/small_loaf.mdl
+                        else if (prop.Value == "tf_projectile_throwable")
+                            EntModelList.Add("models/props_gameplay/small_loaf.mdl");
+                    }
 
-				}
-			}
+                }
+            }
 
             // pack I/O referenced models
             // need to use array form of entity because multiple outputs with same command can't be stored in dict
@@ -469,13 +488,13 @@ namespace BSPPackStandalone
         public void buildEntSoundList()
         {
             // builds the list of sounds referenced in entities
-            EntSoundList = new List<string>();
-			foreach (Dictionary<string, string> ent in entityList)
-				foreach (KeyValuePair<string, string> prop in ent)
-				{
-					if (Keys.vmfSoundKeys.Contains(prop.Key.ToLower()))
-						EntSoundList.Add("sound/" + prop.Value.Trim(SpecialCaracters));
-				}
+            EntSoundList = [];
+            foreach (Dictionary<string, string> ent in entityList)
+                foreach (KeyValuePair<string, string> prop in ent)
+                {
+                    if (Keys.vmfSoundKeys.Contains(prop.Key.ToLower()))
+                        EntSoundList.Add("sound/" + prop.Value.Trim(SpecialCaracters));
+                }
 
             // pack I/O referenced sounds
             // need to use array form of entity because multiple outputs with same command can't be stored in dict
@@ -491,18 +510,18 @@ namespace BSPPackStandalone
                     if (command == "PlayVO")
                     {
                         //Parameter value following PlayVO is always either a sound path or an empty string
-                        if (!string.IsNullOrWhiteSpace(parameter)) 
+                        if (!string.IsNullOrWhiteSpace(parameter))
                             EntSoundList.Add($"sound/{parameter}");
                     }
                     else if (command == "Command")
                     {
                         // format of Command is <command> <parameter>
-                        if(!parameter.Contains(' '))
+                        if (!parameter.Contains(' '))
                             continue;
-                        
-                        (command, parameter) = parameter.Split(' ') switch { var param => (param[0], param[1])};
 
-                        if (command == "play" || command == "playgamesound" )
+                        (command, parameter) = parameter.Split(' ') switch { var param => (param[0], param[1]) };
+
+                        if (command == "play" || command == "playgamesound")
                             EntSoundList.Add($"sound/{parameter}");
                     }
                 }
@@ -511,12 +530,12 @@ namespace BSPPackStandalone
         // color correction, etc.
         public void buildMiscList()
         {
-            MiscList = new List<string>();
+            MiscList = [];
 
             // find color correction files
             foreach (Dictionary<string, string> cc in entityList.Where(item => item["classname"].StartsWith("color_correction")))
                 if (cc.ContainsKey("filename"))
-                    TextureList.Add(cc["filename"]);
+                    MiscList.Add(cc["filename"]);
 
             // pack I/O referenced TF2 upgrade files
             // need to use array form of entity because multiple outputs with same command can't be stored in dict
@@ -539,10 +558,10 @@ namespace BSPPackStandalone
 
         public void buildParticleList()
         {
-            ParticleList = new List<string>();
+            ParticleList = [];
             foreach (Dictionary<string, string> ent in entityList)
                 foreach (KeyValuePair<string, string> particle in ent)
-                     if (particle.Key.ToLower() == "effect_name")
+                    if (particle.Key.ToLower() == "effect_name")
                         ParticleList.Add(particle.Value);
         }
 
@@ -558,18 +577,30 @@ namespace BSPPackStandalone
             var io = property.Split("\u001b");
             if (io.Length != 5)
             {
+                Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine($"Failed to decode IO, ignoring: {property}");
+                Console.ResetColor();
                 return null;
             }
 
             var targetInput = io[1];
             var parameter = io[2];
 
-            if (targetInput == "AddOutput" && parameter.Contains(':'))
+            if (targetInput == "AddOutput")
             {
-                var splitIo = parameter.Split(':');
-                if (splitIo.Length >= 3)
+                // AddOutput format: <output name> <target name>:<input name>:<parameter>:<delay>:<max times to fire> or simple form <key> <value>
+                // only need to convert complex form into simple form
+                if (parameter.Contains(':'))
                 {
+                    var splitIo = parameter.Split(':');
+                    if (splitIo.Length < 3)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"Failed to decode AddOutput, format may be incorrect: {property}");
+                        Console.ResetColor();
+                        return null;
+                    }
+
                     targetInput = splitIo[1];
                     parameter = splitIo[2];
                 }
