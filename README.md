@@ -29,7 +29,7 @@ Support for renaming conflicting particle names<br>
 Packing VPK<br>
 
 ## Linux problem
-For reaons I have not quite figured out yet some texture paths are stored in upper case in BSPs. <br>
+For reasons I have not quite figured out yet some texture paths are stored in upper case in BSPs. <br>
 This does not seem to be a problem with how CompilePal manages files but just the way BSPs store paths.<br>
 Because linux paths are case sensitive all paths are normalized to lower case, meaning all textures that are supposed to be packed need to be in lower case.<br>
 Until there is a way to deal with upper case in BSPs this will remain an issue.
