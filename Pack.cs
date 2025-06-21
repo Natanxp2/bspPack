@@ -11,6 +11,7 @@ using GlobExpressions;
 using BSPPackStandalone.KV;
 using BSPPackStandalone.UtilityProcesses;
 using ValveKeyValue;
+using System.Runtime.CompilerServices;
 
 namespace BSPPackStandalone
 {
@@ -38,6 +39,7 @@ namespace BSPPackStandalone
 		private static bool modify;
 		private static bool unpack;
 		private static bool search;
+		private static bool lowercase;
 
 		static void Main(string[] args)
 		{
@@ -50,6 +52,7 @@ namespace BSPPackStandalone
 			unpack = args.Contains("-U") || args.Contains("--unpack");
 			modify = args.Contains("-M") || args.Contains("--modify");
 			search = args.Contains("-S") || args.Contains("--search");
+			lowercase = args.Contains("-L") || args.Contains("--lowercase");
 
 			Config.LoadConfig(Path.Combine(Config.ExeDirectory, "config.ini"));
 
@@ -67,10 +70,13 @@ Please provide path to BSP.
 -M | --modify             Modifies PakFile based on ResourceConfig.ini
 -U | --unpack             Unpacks the BSP to <filename>_unpacked
 -S | --search             Searches /maps folder of the game directory for the BSP file
+-L | --lowercase		  Lowercases directories, files, and content of .vmt files inside of /materials folder
 ";
 				Console.WriteLine(helpMessage);
 				return;
 			}
+			if (lowercase)
+				LowercaseMaterials();
 
 			if (search)
 				Config.BSPFile = Path.Combine(Config.GameFolder, "maps", args[^1]);
@@ -84,13 +90,14 @@ Please provide path to BSP.
 					Config.CreateDefaultResourceConfigFile(Path.Combine(Config.ExeDirectory, "ResourceConfig.ini"));
 					return;
 				}
-				else
-				{
-					Console.ForegroundColor = ConsoleColor.Red;
-					Console.WriteLine("File not found: " + Config.BSPFile);
-					Console.ResetColor();
+
+				if (lowercase)
 					return;
-				}
+
+				Console.ForegroundColor = ConsoleColor.Red;
+				Console.WriteLine("File not found: " + Config.BSPFile);
+				Console.ResetColor();
+				return;
 			}
 
 			if (modify)
@@ -453,6 +460,84 @@ Please provide path to BSP.
 
 				Console.ResetColor();
 			}
+		}
+
+		static void LowercaseMaterials()
+		{
+			string materialsPath = Path.Join(Config.GameFolder, "materials");
+
+			if (!Directory.Exists(materialsPath))
+			{
+				Console.ForegroundColor = ConsoleColor.Red;
+				Console.WriteLine($"Directory doesn't exist: {materialsPath}, lowercasing cancelled");
+				Console.ResetColor();
+			}
+
+			Console.ForegroundColor = ConsoleColor.Yellow;
+			Console.WriteLine($"You are trying to lowercase all directories, files, and content of .vmt files in:\n{materialsPath}");
+			Console.WriteLine("Please make sure you have a backup in case something goes wrong");
+			Console.WriteLine("Do you want to continue? [y/N]");
+			Console.ResetColor();
+
+			string? input = Console.ReadLine();
+			if (string.IsNullOrWhiteSpace(input) || !input.Trim().StartsWith("y", StringComparison.CurrentCultureIgnoreCase))
+			{
+				Console.ForegroundColor = ConsoleColor.Red;
+				Console.WriteLine("Lowercasing Cancelled");
+				Console.ResetColor();
+			}
+
+			ProcessDirectories(materialsPath);
+
+			static void ProcessDirectories(string path)
+			{
+				foreach (var dir in Directory.GetDirectories(path))
+				{
+					ProcessDirectories(dir);
+				}
+
+				foreach (var filePath in Directory.GetFiles(path))
+				{
+					string fileName = Path.GetFileName(filePath);
+					string lowerFileName = fileName.ToLowerInvariant();
+
+					if (filePath.EndsWith(".vmt", StringComparison.OrdinalIgnoreCase))
+					{
+						string[] lines = File.ReadAllLines(filePath);
+						if (lines.Length > 0)
+						{
+							string firstLine = lines[0];
+							List<string> lowerLines = [.. lines.Skip(1).Select(line => line.ToLowerInvariant())];
+							lowerLines.Insert(0, firstLine);
+
+							File.WriteAllLines(filePath, lowerLines);
+						}
+					}
+
+					if (fileName != lowerFileName)
+					{
+						string newFilePath = Path.Combine(Path.GetDirectoryName(filePath)!, lowerFileName);
+						if (!File.Exists(newFilePath))
+							File.Move(filePath, newFilePath);
+					}
+				}
+
+				string dirName = Path.GetFileName(path);
+				string parentDir = Path.GetDirectoryName(path)!;
+				string lowerDirName = dirName.ToLowerInvariant();
+
+				if (dirName != lowerDirName)
+				{
+					string newDirPath = Path.Combine(parentDir, lowerDirName);
+					if (!Directory.Exists(newDirPath))
+						Directory.Move(path, newDirPath);
+				}
+
+			}
+
+			Console.ForegroundColor = ConsoleColor.Green;
+			Console.WriteLine("Files and Directories successfully lowercased!");
+			Console.ResetColor();
 		}
 	}
 }
