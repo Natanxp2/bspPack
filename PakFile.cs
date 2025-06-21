@@ -21,8 +21,10 @@ namespace BSPPackStandalone
         {
             if (externalPath.Length > 256)
             {
-				Console.WriteLine($"File length over 256 characters, file may not pack properly:\n{externalPath}");
-			}
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"File length over 256 characters, file may not pack properly:\n{externalPath}");
+                Console.ResetColor();
+            }
             return AddFile(new KeyValuePair<string, string>(internalPath, externalPath));
         }
         // onFailure is for utility files such as nav, radar, etc which get excluded. if they are excluded, the Delegate is run. This is used for removing the files from the BSP class, so they dont appear in the summary at the end
@@ -32,9 +34,9 @@ namespace BSPPackStandalone
             // exclude files that are excluded
             if (externalPath != "" && File.Exists(externalPath)
                                    && !excludedFiles.Any(file => file.Equals(externalPath, StringComparison.OrdinalIgnoreCase))
-								   && !excludedDirs.Any(dir => externalPath.StartsWith(dir, StringComparison.OrdinalIgnoreCase))
-								   && !excludedVpkFiles.Any(vpkFile => vpkFile.Equals(paths.Key, StringComparison.OrdinalIgnoreCase)))
-            {	
+                                   && !excludedDirs.Any(dir => externalPath.StartsWith(dir, StringComparison.OrdinalIgnoreCase))
+                                   && !excludedVpkFiles.Any(vpkFile => vpkFile.Equals(paths.Key, StringComparison.OrdinalIgnoreCase)))
+            {
                 Files.Add(paths);
                 return true;
             }
@@ -74,7 +76,7 @@ namespace BSPPackStandalone
                     break;
                 case ".res":
                     AddInternalFile(internalPath, externalPath);
-                    foreach (string material in AssetUtils.findResMaterials(externalPath))
+                    foreach (string material in AssetUtils.FindResMaterials(externalPath))
                         AddTexture(material);
                     break;
                 case ".nut":
@@ -100,7 +102,7 @@ namespace BSPPackStandalone
             potentialSubDir.Remove(baseDir);
             foreach (var folder in potentialSubDir)
             {
-                if (fileInfo.Directory != null 
+                if (fileInfo.Directory != null
                     && fileInfo.Directory.FullName.Contains(folder, StringComparison.OrdinalIgnoreCase))
                 {
                     baseDir = folder;
@@ -109,7 +111,8 @@ namespace BSPPackStandalone
             }
 
             // check needed for when file does not exist in any sub directory or the base directory
-            if (fileInfo.Directory != null && !fileInfo.Directory.FullName.ToLower().Contains(baseDir.ToLower())) {
+            if (fileInfo.Directory != null && !fileInfo.Directory.FullName.ToLower().Contains(baseDir.ToLower()))
+            {
                 return false;
             }
 
@@ -120,7 +123,7 @@ namespace BSPPackStandalone
         }
 
         private List<string> excludedFiles;
-	    private List<string> excludedDirs;
+        private List<string> excludedDirs;
         private List<string> excludedVpkFiles;
 
         private List<string> sourceDirs;
@@ -144,9 +147,9 @@ namespace BSPPackStandalone
             fileName = outputFile;
             noSwvtx = noswvtx;
 
-	        this.excludedFiles = excludedFiles;
-	        this.excludedDirs = excludedDirs;
-	        this.excludedVpkFiles = excludedVpkFiles;
+            this.excludedFiles = excludedFiles;
+            this.excludedDirs = excludedDirs;
+            this.excludedVpkFiles = excludedVpkFiles;
             Files = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 
             if (bsp.nav.Key != default(string))
@@ -179,25 +182,25 @@ namespace BSPPackStandalone
             {
                 if (AddFile(bsp.particleManifest, (b => b.particleManifest = default), bsp))
                 {
-                    foreach (string particle in AssetUtils.findManifestPcfs(bsp.particleManifest.Value))
+                    foreach (string particle in AssetUtils.FindManifestPcfs(bsp.particleManifest.Value))
                         AddParticle(particle);
                 }
             }
-            
+
             if (bsp.soundscape.Key != default(string))
             {
                 if (AddFile(bsp.soundscape, (b => b.soundscape = default), bsp))
                 {
-                    foreach (string sound in AssetUtils.findSoundscapeSounds(bsp.soundscape.Value))
+                    foreach (string sound in AssetUtils.FindSoundscapeSounds(bsp.soundscape.Value))
                         AddSound(sound);
                 }
             }
-            
+
             if (bsp.soundscript.Key != default(string))
             {
                 if (AddFile(bsp.soundscript, (b => b.soundscript = default), bsp))
                 {
-                    foreach (string sound in AssetUtils.findSoundscapeSounds(bsp.soundscript.Value))
+                    foreach (string sound in AssetUtils.FindSoundscapeSounds(bsp.soundscript.Value))
                         AddSound(sound);
                 }
             }
@@ -205,9 +208,9 @@ namespace BSPPackStandalone
             foreach (KeyValuePair<string, string> vehicleScript in bsp.VehicleScriptList)
                 if (AddInternalFile(vehicleScript.Key, vehicleScript.Value))
                     vehiclescriptcount++;
-	        foreach (KeyValuePair<string, string> effectScript in bsp.EffectScriptList)
-		        if (AddInternalFile(effectScript.Key, effectScript.Value))
-			        effectscriptcount++;
+            foreach (KeyValuePair<string, string> effectScript in bsp.EffectScriptList)
+                if (AddInternalFile(effectScript.Key, effectScript.Value))
+                    effectscriptcount++;
             foreach (KeyValuePair<string, string> dds in bsp.radardds)
                 AddInternalFile(dds.Key, dds.Value);
             foreach (KeyValuePair<string, string> lang in bsp.languages)
@@ -233,19 +236,24 @@ namespace BSPPackStandalone
             {
                 if (AddFile(res, null, bsp))
                 {
-                    foreach (string material in AssetUtils.findResMaterials(res.Value))
+                    foreach (string material in AssetUtils.FindResMaterials(res.Value))
                         AddTexture(material);
                 }
-                
+
             }
 
-			// add all manually included files
-	        foreach (var file in includeFiles)
-	        {
+            // add all manually included files
+            foreach (var file in includeFiles)
+            {
+
                 if (!AddFile(file))
-					Console.WriteLine($"Failed to resolve internal path for {file}, skipping\n");
-			}
-		}
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"WARNING: Failed to resolve internal path for {file}, skipping\n");
+                    Console.ResetColor();
+                }
+            }
+        }
 
         public void OutputToFile()
         {
@@ -265,9 +273,9 @@ namespace BSPPackStandalone
             File.WriteAllLines(fileName, outputLines);
         }
 
-        public Dictionary<string,string> GetResponseFile()
+        public Dictionary<string, string> GetResponseFile()
         {
-            var output = new Dictionary<string,string>();
+            var output = new Dictionary<string, string>();
 
             foreach (var entry in Files)
             {
@@ -279,15 +287,15 @@ namespace BSPPackStandalone
 
         public bool AddInternalFile(string internalPath, string externalPath)
         {
-                internalPath = internalPath.Replace("\\", "/");
-                // sometimes internal paths can be relative, ex. "materials/vgui/../hud/logos/spray.vmt" should be stored as "materials/hud/logos/spray.vmt".
-                internalPath = Regex.Replace(internalPath, @"\/.*\/\.\.", "");
-                if (!Files.ContainsKey(internalPath))
-                {
-                    return AddFile(internalPath, externalPath);
-                }
+            internalPath = internalPath.Replace("\\", "/");
+            // sometimes internal paths can be relative, ex. "materials/vgui/../hud/logos/spray.vmt" should be stored as "materials/hud/logos/spray.vmt".
+            internalPath = Regex.Replace(internalPath, @"\/.*\/\.\.", "");
+            if (!Files.ContainsKey(internalPath))
+            {
+                return AddFile(internalPath, externalPath);
+            }
 
-                return false;
+            return false;
         }
 
         public void AddModel(string internalPath, List<int> skins = null)
@@ -297,19 +305,19 @@ namespace BSPPackStandalone
             if (AddInternalFile(internalPath, externalPath))
             {
                 mdlcount++;
-                List<string> vtxMaterialNames = new List<string>();
-                foreach (string reference in AssetUtils.findMdlRefs(internalPath))
+                List<string> vtxMaterialNames = [];
+                foreach (string reference in AssetUtils.FindMdlRefs(internalPath))
                 {
                     string ext_path = FindExternalFile(reference);
 
                     //don't pack .sw.vtx files if param is set
-                    if (reference.EndsWith(".sw.vtx") && this.noSwvtx) 
+                    if (reference.EndsWith(".sw.vtx") && this.noSwvtx)
                         continue;
 
                     AddInternalFile(reference, ext_path);
 
                     if (reference.EndsWith(".phy"))
-                        foreach (string gib in AssetUtils.findPhyGibs(ext_path))
+                        foreach (string gib in AssetUtils.FindPhyGibs(ext_path))
                             AddModel(gib);
 
                     if (reference.EndsWith(".vtx"))
@@ -317,10 +325,12 @@ namespace BSPPackStandalone
                         try
                         {
                             vtxMaterialNames.AddRange(AssetUtils.FindVtxMaterials(ext_path));
-                        } catch (Exception e)
+                        }
+                        catch (Exception)
                         {
-							Console.WriteLine($"Failed to find vtx materials for file {ext_path}");
-							Console.WriteLine(e);
+                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            Console.WriteLine($"WARNING: Failed to find vtx materials for file {ext_path}");
+                            Console.ResetColor();
                         }
 
                     }
@@ -329,20 +339,21 @@ namespace BSPPackStandalone
                 Tuple<List<string>, List<string>> mdlMatsAndModels;
                 try
                 {
-	                mdlMatsAndModels = AssetUtils.findMdlMaterialsAndModels(externalPath, skins, vtxMaterialNames);
+                    mdlMatsAndModels = AssetUtils.FindMdlMaterialsAndModels(externalPath, skins, vtxMaterialNames);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
-					Console.WriteLine($"Failed to read file {externalPath}");
-					Console.WriteLine(e);
-	                return;
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"WARNING: Failed to read file {externalPath}");
+                    Console.ResetColor();
+                    return;
                 }
 
-	            foreach (string mat in mdlMatsAndModels.Item1)
-					AddTexture(mat);
+                foreach (string mat in mdlMatsAndModels.Item1)
+                    AddTexture(mat);
 
-	            foreach (var model in mdlMatsAndModels.Item2)
-					AddModel(model, null);
+                foreach (var model in mdlMatsAndModels.Item2)
+                    AddModel(model, null);
 
             }
         }
@@ -354,9 +365,9 @@ namespace BSPPackStandalone
             if (AddInternalFile(internalPath, externalPath))
             {
                 vmtcount++;
-                foreach (string vtf in AssetUtils.findVmtTextures(externalPath))
+                foreach (string vtf in AssetUtils.FindVmtTextures(externalPath))
                     AddInternalFile(vtf, FindExternalFile(vtf));
-                foreach (string vmt in AssetUtils.findVmtMaterials(externalPath))
+                foreach (string vmt in AssetUtils.FindVmtMaterials(externalPath))
                     AddTexture(vmt);
             }
         }
@@ -367,14 +378,16 @@ namespace BSPPackStandalone
             string externalPath = FindExternalFile(internalPath);
             if (externalPath == String.Empty)
             {
-				Console.WriteLine($"Failed to find particle manifest file {internalPath}");
-				return;
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"Failed to find particle manifest file {internalPath}");
+                Console.ResetColor();
+                return;
             }
 
             if (AddInternalFile(internalPath, externalPath))
             {
 
-				PCF pcf = ParticleUtils.ReadParticle(externalPath);
+                PCF pcf = ParticleUtils.ReadParticle(externalPath);
                 pcfcount++;
                 foreach (string mat in pcf.MaterialNames)
                     AddTexture(mat);
@@ -386,8 +399,10 @@ namespace BSPPackStandalone
             }
             else
             {
-				Console.WriteLine($"Failed to find particle manifest file {internalPath}");
-				return;
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"Failed to find particle manifest file {internalPath}");
+                Console.ResetColor();
+                return;
             }
         }
 
@@ -422,7 +437,9 @@ namespace BSPPackStandalone
 
             if (!AddInternalFile(internalPath, externalPath))
             {
-				Console.WriteLine($"Failed to find VScript file {internalPath}\n");
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"WARNING: Failed to find VScript file {internalPath}\n");
+                Console.ResetColor();
                 return;
             }
             vscriptcount++;
@@ -437,9 +454,12 @@ namespace BSPPackStandalone
             foreach (string internalDirectoryPath in includedDirectories)
             {
                 var externalDirectoriesPaths = FindExternalDirectories(internalDirectoryPath);
-                if (externalDirectoriesPaths.Count == 0) {
-                    Console.WriteLine($"Failed to resolve external path for VScript hint {internalDirectoryPath}, skipping\n");
-					continue;
+                if (externalDirectoriesPaths.Count == 0)
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"WARNING: Failed to resolve external path for VScript hint {internalDirectoryPath}, skipping\n");
+                    Console.ResetColor();
+                    continue;
                 }
 
                 foreach (var externalDirectoryPath in externalDirectoriesPaths)
@@ -454,9 +474,12 @@ namespace BSPPackStandalone
             foreach (string internalFilePath in includedFiles)
             {
                 var externalFilePath = FindExternalFile(internalFilePath);
-                if (!File.Exists(externalFilePath)) {            
-                    Console.WriteLine($"Failed to resolve external path for VScript hint {internalFilePath}, skipping\n");
-					continue;
+                if (!File.Exists(externalFilePath))
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"WARNING: Failed to resolve external path for VScript hint {internalFilePath}, skipping\n");
+                    Console.ResetColor();
+                    continue;
                 }
 
                 AddGenericFile(internalFilePath, externalPath);
@@ -468,7 +491,7 @@ namespace BSPPackStandalone
             // Attempts to find the file from the internalPath
             // returns the externalPath or an empty string
 
-	        var sanitizedPath = SanitizePath(internalPath);
+            var sanitizedPath = SanitizePath(internalPath);
 
             foreach (string source in sourceDirs)
                 if (File.Exists(Path.Combine(source, sanitizedPath)))
@@ -497,11 +520,11 @@ namespace BSPPackStandalone
         }
 
 
-		private static readonly string invalidChars = Regex.Escape(new string(Path.GetInvalidPathChars()));
-		private static readonly string invalidRegString = $@"([{invalidChars}]*\.+$)|([{invalidChars}]+)";
-		private string SanitizePath(string path)
-	    {
-		    return Regex.Replace(path, invalidRegString, "");
-	    }
+        private static readonly string invalidChars = Regex.Escape(new string(Path.GetInvalidPathChars()));
+        private static readonly string invalidRegString = $@"([{invalidChars}]*\.+$)|([{invalidChars}]+)";
+        private string SanitizePath(string path)
+        {
+            return Regex.Replace(path, invalidRegString, "");
+        }
     }
 }
