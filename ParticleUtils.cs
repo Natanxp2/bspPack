@@ -11,22 +11,22 @@ namespace BSPPackStandalone.UtilityProcesses
     public class PCF
     {
         //Class to hold information about a pcf
-        public string FilePath;
+        public string FilePath = null!;
 
         public int BinaryVersion;
         public int PcfVersion;
 
         public int NumDictStrings;
-        public List<string> StringDict = new List<string>();
+        public List<string> StringDict = [];
 
-        public List<string> ParticleNames = new List<string>();
-        public List<string> MaterialNames = new List<string>();
-        public List<string> ModelNames = new List<string>();
+        public List<string> ParticleNames = [];
+        public List<string> MaterialNames = [];
+        public List<string> ModelNames = [];
 
 
         public List<string> GetModelNames()
         {
-            List<string> modelList = new List<string>();
+            List<string> modelList = [];
             //All strings including model names are stored in string dict for binary 4+
             //TODO I think only binary 4+ support models, but if not we need to implement a method to read them for lower versions
             foreach (string s in StringDict)
@@ -44,7 +44,7 @@ namespace BSPPackStandalone.UtilityProcesses
         //All strings including materials are stored in string dict of binary v4 pcfs
         public List<string> GetMaterialNamesV4()
         {
-            List<string> materialNames = new List<string>();
+            List<string> materialNames = [];
 
             foreach (string s in StringDict)
             {
@@ -60,28 +60,28 @@ namespace BSPPackStandalone.UtilityProcesses
             }
             return materialNames;
         }
-        
+
     }
 
     public static class ParticleUtils
     {
         //Partially reads particle to get particle name to determine if it is a target particle
         //Returns null if not target particle
-        public static PCF IsTargetParticle(string filePath, List<string> targetParticles)
+        public static PCF? IsTargetParticle(string filePath, List<string> targetParticles)
         {
             FileStream fs;
             try
             {
                 fs = new FileStream(filePath, FileMode.Open);
             }
-            catch (FileNotFoundException e)
+            catch (FileNotFoundException)
             {
-				Console.WriteLine($"Could not find {filePath}\n");
+                Console.WriteLine($"Could not find {filePath}\n");
                 return null;
             }
 
-            PCF pcf = new PCF();
-            BinaryReader reader = new BinaryReader(fs);
+            PCF pcf = new();
+            BinaryReader reader = new(fs);
 
             pcf.FilePath = filePath;
 
@@ -94,9 +94,9 @@ namespace BSPPackStandalone.UtilityProcesses
 
             //Extract info from magic string
             string[] magicSplit = magicString.Split(' ');
-            
+
             //Store binary and pcf versions
-            Int32.TryParse(magicSplit[0], out pcf.BinaryVersion); 
+            Int32.TryParse(magicSplit[0], out pcf.BinaryVersion);
             Int32.TryParse(magicSplit[3], out pcf.PcfVersion);
 
             //Different versions have different stringDict sizes
@@ -140,7 +140,7 @@ namespace BSPPackStandalone.UtilityProcesses
                     elementName = pcf.StringDict[elementNameIndex];
                     fs.Seek(20, SeekOrigin.Current);
                 }
-                
+
                 //Get particle names
                 if (typeName == "DmeParticleSystemDefinition")
                     pcf.ParticleNames.Add(elementName);
@@ -170,21 +170,21 @@ namespace BSPPackStandalone.UtilityProcesses
         }
 
         //Fully reads particle
-        public static PCF ReadParticle(string filePath)
+        public static PCF? ReadParticle(string filePath)
         {
             FileStream fs;
             try
             {
                 fs = new FileStream(filePath, FileMode.Open);
             }
-            catch (FileNotFoundException e)
+            catch (FileNotFoundException)
             {
-				Console.WriteLine($"Could not find {filePath}\n");
+                Console.WriteLine($"Could not find {filePath}\n");
                 return null;
             }
 
-            PCF pcf = new PCF();
-            BinaryReader reader = new BinaryReader(fs);
+            PCF pcf = new();
+            BinaryReader reader = new(fs);
 
             pcf.FilePath = filePath;
 
@@ -197,9 +197,9 @@ namespace BSPPackStandalone.UtilityProcesses
 
             //Extract info from magic string
             string[] magicSplit = magicString.Split(' ');
-            
+
             //Store binary and pcf versions
-            Int32.TryParse(magicSplit[0], out pcf.BinaryVersion); 
+            Int32.TryParse(magicSplit[0], out pcf.BinaryVersion);
             Int32.TryParse(magicSplit[3], out pcf.PcfVersion);
 
             //Different versions have different stringDict sizes
@@ -243,7 +243,7 @@ namespace BSPPackStandalone.UtilityProcesses
                     elementName = pcf.StringDict[elementNameIndex];
                     fs.Seek(20, SeekOrigin.Current);
                 }
-                
+
                 //Get particle names
                 if (typeName == "DmeParticleSystemDefinition")
                     pcf.ParticleNames.Add(elementName);
@@ -304,7 +304,7 @@ namespace BSPPackStandalone.UtilityProcesses
                         default:
                             fs.Seek(typelength[attributeType] * count, SeekOrigin.Current);
                             break;
-                            
+
                     }
                 }
             }
@@ -318,7 +318,7 @@ namespace BSPPackStandalone.UtilityProcesses
 
         private static string ReadNullTerminatedString(FileStream fs, BinaryReader reader)
         {
-            List<byte> verString = new List<byte>();
+            List<byte> verString = [];
             byte v;
             do
             {
@@ -334,20 +334,20 @@ namespace BSPPackStandalone.UtilityProcesses
     class ParticleManifest
     {
         //Class responsible for holding information about particles
-        private List<PCF> particles;
+        private List<PCF> particles = [];
         private string internalPath = "particles\\";
-        private string filepath;
+        private string filepath = String.Empty;
         private string baseDirectory;
 
         public KeyValuePair<string, string> particleManifest { get; private set; }
 
-        public ParticleManifest (List<string> sourceDirectories, List<string> ignoreDirectories, List<string> excludedFiles, BSP map, string bspPath, string gameFolder)
+        public ParticleManifest(List<string> sourceDirectories, List<string> ignoreDirectories, List<string> excludedFiles, BSP map, string bspPath, string gameFolder)
         {
-			Console.WriteLine($"\nGenerating Particle Manifest...");
+            Console.WriteLine($"\nGenerating Particle Manifest...");
 
             baseDirectory = gameFolder + "\\";
 
-            particles = new List<PCF>();
+            particles = [];
 
             //Search directories for pcf and find particles that match used particle names
             //TODO multithread this?
@@ -360,7 +360,7 @@ namespace BSPPackStandalone.UtilityProcesses
                     {
                         if (file.EndsWith(".pcf") && !excludedFiles.Contains(file.ToLower()))
                         {
-                            PCF pcf = ParticleUtils.IsTargetParticle(file, map.ParticleList);
+                            PCF? pcf = ParticleUtils.IsTargetParticle(file, map.ParticleList);
                             if (pcf != null && !particles.Exists(p => p.FilePath == pcf.FilePath))
                                 particles.Add(pcf);
                         }
@@ -370,13 +370,13 @@ namespace BSPPackStandalone.UtilityProcesses
             if (particles == null || particles.Count == 0)
             {
                 Console.WriteLine("Could not find any PCFs that contained used particles!\n");
-				return;
+                return;
             }
-                
+
 
             //Check for pcfs that contain the same particle name
             //List<ParticleConflict> conflictingParticles = new List<ParticleConflict>();
-            List<PCF> conflictingParticles = new List<PCF>();
+            List<PCF> conflictingParticles = [];
             if (particles.Count > 1)
             {
                 for (int i = 0; i < particles.Count - 1; i++)
@@ -393,17 +393,17 @@ namespace BSPPackStandalone.UtilityProcesses
                             conflictingParticles.Add(particles[i]);
                             conflictingParticles.Add(particles[j]);
                         }
-                            
+
                     }
                 }
             }
 
             //Solve conflicts
             if (conflictingParticles.Count != 0)
-            {	
-				Console.WriteLine("Conflicting particles exist. Resolve conflicts and try again");
-				System.Environment.Exit(1);
-				/* THIS IS TO RESOLVE CONFLICTING PARTICLES, IMPLEMENT AT SOME POINT (I PROBABLY WON'T)
+            {
+                Console.WriteLine("Conflicting particles exist. Resolve conflicts and try again");
+                System.Environment.Exit(1);
+                /* THIS IS TO RESOLVE CONFLICTING PARTICLES, IMPLEMENT AT SOME POINT (I PROBABLY WON'T)
 				
                 //Remove particle if it is in a particle conflict, add back when conflict is manually resolved
                 foreach (PCF conflictParticle in conflictingParticles)
@@ -440,12 +440,12 @@ namespace BSPPackStandalone.UtilityProcesses
             //Dont create particle manifest if there is no particles
             if (particles.Count == 0)
                 return;
-            
+
             //Generate manifest file
             filepath = bspPath.Remove(bspPath.Length - 4, 4) + "_particles.txt";
 
             //Write manifest
-            using (StreamWriter sw = new StreamWriter(filepath))
+            using (StreamWriter sw = new(filepath))
             {
                 sw.WriteLine("particles_manifest");
                 sw.WriteLine("{");
@@ -460,7 +460,7 @@ namespace BSPPackStandalone.UtilityProcesses
                             string internalParticlePath = particle.FilePath.Remove(0, source.Length + 1);
 
                             sw.WriteLine($"      \"file\"    \"!{internalParticlePath}\"");
-							Console.WriteLine($"PCF added to manifest: {internalParticlePath}");
+                            Console.WriteLine($"PCF added to manifest: {internalParticlePath}");
                         }
                     }
                 }
@@ -469,7 +469,7 @@ namespace BSPPackStandalone.UtilityProcesses
             }
 
             string internalDirectory = filepath;
-            if(filepath.ToLower().StartsWith(baseDirectory.ToLower()))
+            if (filepath.ToLower().StartsWith(baseDirectory.ToLower()))
             {
                 internalDirectory = filepath.Substring(baseDirectory.Length);
             }

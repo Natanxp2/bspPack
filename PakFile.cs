@@ -20,11 +20,8 @@ namespace BSPPackStandalone
         private bool AddFile(string internalPath, string externalPath)
         {
             if (externalPath.Length > 256)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"File length over 256 characters, file may not pack properly:\n{externalPath}");
-                Console.ResetColor();
-            }
+                Message.Error($"File length over 256 characters, file may not pack properly:\n{externalPath}");
+
             return AddFile(new KeyValuePair<string, string>(internalPath, externalPath));
         }
         // onFailure is for utility files such as nav, radar, etc which get excluded. if they are excluded, the Delegate is run. This is used for removing the files from the BSP class, so they dont appear in the summary at the end
@@ -152,23 +149,23 @@ namespace BSPPackStandalone
             this.excludedVpkFiles = excludedVpkFiles;
             Files = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 
-            if (bsp.nav.Key != default(string))
-                AddFile(bsp.nav, (b => b.nav = default), bsp);
+            if (bsp.Nav.Key != default(string))
+                AddFile(bsp.Nav, (b => b.Nav = default), bsp);
 
-            if (bsp.detail.Key != default(string))
-                AddFile(bsp.detail, (b => b.detail = default), bsp);
+            if (bsp.Detail.Key != default(string))
+                AddFile(bsp.Detail, (b => b.Detail = default), bsp);
 
-            if (bsp.kv.Key != default(string))
-                AddFile(bsp.kv, (b => b.kv = default), bsp);
+            if (bsp.Kv.Key != default(string))
+                AddFile(bsp.Kv, (b => b.Kv = default), bsp);
 
-            if (bsp.txt.Key != default(string))
-                AddFile(bsp.txt, (b => b.txt = default), bsp);
+            if (bsp.Txt.Key != default(string))
+                AddFile(bsp.Txt, (b => b.Txt = default), bsp);
 
-            if (bsp.jpg.Key != default(string))
-                AddFile(bsp.jpg, (b => b.jpg = default), bsp);
+            if (bsp.Jpg.Key != default(string))
+                AddFile(bsp.Jpg, (b => b.Jpg = default), bsp);
 
-            if (bsp.radartxt.Key != default(string))
-                AddFile(bsp.radartxt, (b => b.radartxt = default), bsp);
+            if (bsp.Radartxt.Key != default(string))
+                AddFile(bsp.Radartxt, (b => b.Radartxt = default), bsp);
 
             if (bsp.RadarTablet.Key != default(string))
                 AddFile(bsp.RadarTablet, (b => b.RadarTablet = default), bsp);
@@ -178,29 +175,29 @@ namespace BSPPackStandalone
                 AddFile(bsp.PanoramaMapIcon, (b => b.PanoramaMapIcon = default), bsp);
             }
 
-            if (bsp.particleManifest.Key != default(string))
+            if (bsp.ParticleManifest.Key != default(string))
             {
-                if (AddFile(bsp.particleManifest, (b => b.particleManifest = default), bsp))
+                if (AddFile(bsp.ParticleManifest, (b => b.ParticleManifest = default), bsp))
                 {
-                    foreach (string particle in AssetUtils.FindManifestPcfs(bsp.particleManifest.Value))
+                    foreach (string particle in AssetUtils.FindManifestPcfs(bsp.ParticleManifest.Value))
                         AddParticle(particle);
                 }
             }
 
-            if (bsp.soundscape.Key != default(string))
+            if (bsp.Soundscape.Key != default(string))
             {
-                if (AddFile(bsp.soundscape, (b => b.soundscape = default), bsp))
+                if (AddFile(bsp.Soundscape, (b => b.Soundscape = default), bsp))
                 {
-                    foreach (string sound in AssetUtils.FindSoundscapeSounds(bsp.soundscape.Value))
+                    foreach (string sound in AssetUtils.FindSoundscapeSounds(bsp.Soundscape.Value))
                         AddSound(sound);
                 }
             }
 
-            if (bsp.soundscript.Key != default(string))
+            if (bsp.Soundscript.Key != default(string))
             {
-                if (AddFile(bsp.soundscript, (b => b.soundscript = default), bsp))
+                if (AddFile(bsp.Soundscript, (b => b.Soundscript = default), bsp))
                 {
-                    foreach (string sound in AssetUtils.FindSoundscapeSounds(bsp.soundscript.Value))
+                    foreach (string sound in AssetUtils.FindSoundscapeSounds(bsp.Soundscript.Value))
                         AddSound(sound);
                 }
             }
@@ -211,14 +208,14 @@ namespace BSPPackStandalone
             foreach (KeyValuePair<string, string> effectScript in bsp.EffectScriptList)
                 if (AddInternalFile(effectScript.Key, effectScript.Value))
                     effectscriptcount++;
-            foreach (KeyValuePair<string, string> dds in bsp.radardds)
+            foreach (KeyValuePair<string, string> dds in bsp.Radardds)
                 AddInternalFile(dds.Key, dds.Value);
-            foreach (KeyValuePair<string, string> lang in bsp.languages)
+            foreach (KeyValuePair<string, string> lang in bsp.Languages)
                 AddInternalFile(lang.Key, lang.Value);
             foreach (string model in bsp.EntModelList)
                 AddModel(model);
             for (int i = 0; i < bsp.ModelList.Count; i++)
-                AddModel(bsp.ModelList[i], bsp.modelSkinList[i]);
+                AddModel(bsp.ModelList[i], bsp.ModelSkinList[i]);
             foreach (string vmt in bsp.TextureList)
                 AddTexture(vmt);
             foreach (string vmt in bsp.EntTextureList)
@@ -227,12 +224,12 @@ namespace BSPPackStandalone
                 AddInternalFile(misc, FindExternalFile(misc));
             foreach (string sound in bsp.EntSoundList)
                 AddSound(sound);
-            foreach (string vscript in bsp.vscriptList)
+            foreach (string vscript in bsp.VscriptList)
                 AddVScript(vscript);
             foreach (KeyValuePair<string, string> teamSelectionBackground in bsp.PanoramaMapBackgrounds)
                 if (AddInternalFile(teamSelectionBackground.Key, teamSelectionBackground.Value))
                     PanoramaMapBackgroundCount++;
-            foreach (var res in bsp.res)
+            foreach (var res in bsp.Res)
             {
                 if (AddFile(res, null, bsp))
                 {
@@ -245,13 +242,8 @@ namespace BSPPackStandalone
             // add all manually included files
             foreach (var file in includeFiles)
             {
-
                 if (!AddFile(file))
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"WARNING: Failed to resolve internal path for {file}, skipping\n");
-                    Console.ResetColor();
-                }
+                    Message.Warning($"WARNING: Failed to resolve internal path for {file}, skipping\n");
             }
         }
 
@@ -298,7 +290,7 @@ namespace BSPPackStandalone
             return false;
         }
 
-        public void AddModel(string internalPath, List<int> skins = null)
+        public void AddModel(string internalPath, List<int>? skins = null)
         {
             // adds mdl files and finds its dependencies
             string externalPath = FindExternalFile(internalPath);
@@ -328,9 +320,7 @@ namespace BSPPackStandalone
                         }
                         catch (Exception)
                         {
-                            Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.WriteLine($"WARNING: Failed to find vtx materials for file {ext_path}");
-                            Console.ResetColor();
+                            Message.Warning($"WARNING: Failed to find vtx materials for file {ext_path}");
                         }
 
                     }
@@ -343,9 +333,7 @@ namespace BSPPackStandalone
                 }
                 catch (Exception)
                 {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"WARNING: Failed to read file {externalPath}");
-                    Console.ResetColor();
+                    Message.Warning($"WARNING: Failed to read file {externalPath}");
                     return;
                 }
 
@@ -378,30 +366,23 @@ namespace BSPPackStandalone
             string externalPath = FindExternalFile(internalPath);
             if (externalPath == String.Empty)
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"Failed to find particle manifest file {internalPath}");
-                Console.ResetColor();
+                Message.Warning($"WARNING: Failed to find particle manifest file {internalPath}");
                 return;
             }
 
-            if (AddInternalFile(internalPath, externalPath))
+            PCF? pcf = ParticleUtils.ReadParticle(externalPath);
+            if (AddInternalFile(internalPath, externalPath) && pcf != null)
             {
-
-                PCF pcf = ParticleUtils.ReadParticle(externalPath);
                 pcfcount++;
                 foreach (string mat in pcf.MaterialNames)
                     AddTexture(mat);
 
                 foreach (string model in pcf.ModelNames)
-                {
                     AddModel(model);
-                }
             }
             else
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"Failed to find particle manifest file {internalPath}");
-                Console.ResetColor();
+                Message.Warning($"WARNING: Failed to find particle manifest file {internalPath}");
                 return;
             }
         }
@@ -437,9 +418,7 @@ namespace BSPPackStandalone
 
             if (!AddInternalFile(internalPath, externalPath))
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"WARNING: Failed to find VScript file {internalPath}\n");
-                Console.ResetColor();
+                Message.Warning($"WARNING: Failed to find VScript file {internalPath}\n");
                 return;
             }
             vscriptcount++;
@@ -456,9 +435,7 @@ namespace BSPPackStandalone
                 var externalDirectoriesPaths = FindExternalDirectories(internalDirectoryPath);
                 if (externalDirectoriesPaths.Count == 0)
                 {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"WARNING: Failed to resolve external path for VScript hint {internalDirectoryPath}, skipping\n");
-                    Console.ResetColor();
+                    Message.Warning($"WARNING: Failed to resolve external path for VScript hint {internalDirectoryPath}, skipping\n");
                     continue;
                 }
 
@@ -476,9 +453,7 @@ namespace BSPPackStandalone
                 var externalFilePath = FindExternalFile(internalFilePath);
                 if (!File.Exists(externalFilePath))
                 {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"WARNING: Failed to resolve external path for VScript hint {internalFilePath}, skipping\n");
-                    Console.ResetColor();
+                    Message.Warning($"WARNING: Failed to resolve external path for VScript hint {internalFilePath}, skipping\n");
                     continue;
                 }
 

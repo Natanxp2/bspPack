@@ -7,15 +7,15 @@ namespace BSPPackStandalone
 	public static class Config
 	{
 		public static string ExeDirectory = AppContext.BaseDirectory;
-		public static string BSPFile { get; set; }
-		public static string GameFolder { get; set; } 
-		public static string SteamAppsPath { get; set; }
-		
-		public static string BSPZip { get; private set; }
-		public static string KeysFolder { get; private set; }
-		public static string TempFolder { get; private set; }
-		public static string CopyLocation { get; private set; }
-		public static string VPK { get; private set; }
+		public static string BSPFile { get; set; } = null!;
+		public static string GameFolder { get; set; } = null!;
+		public static string SteamAppsPath { get; set; } = null!;
+
+		public static string BSPZip { get; private set; } = null!;
+		public static string KeysFolder { get; private set; } = null!;
+		public static string TempFolder { get; private set; } = null!;
+		public static string CopyLocation { get; private set; } = null!;
+		public static string VPK { get; private set; } = null!;
 
 		public static void InitializeConfig()
 		{
@@ -23,13 +23,20 @@ namespace BSPPackStandalone
 				BSPZip = Path.Combine(GameFolder, @"../bin/win64", "bspzip.exe");
 			else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
 				BSPZip = Path.Combine(GameFolder, @"../bin/linux64", "bspzip");
-			
+
 			KeysFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Keys");
+
+			if (!Directory.Exists(KeysFolder))
+			{
+				Message.Error($"Keys folder doesn't exist in {AppDomain.CurrentDomain.BaseDirectory}!");
+				Environment.Exit(1);
+			}
+
 			TempFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Temp");
 			CopyLocation = Path.Combine(AppDomain.CurrentDomain.BaseDirectory); //Placeholder
 			VPK = Path.Combine(AppDomain.CurrentDomain.BaseDirectory); //Placeholder
 		}
-		
+
 		public static void CreateDefaultResourceConfigFile(string filePath)
 		{
 			if (File.Exists(filePath))
@@ -67,8 +74,8 @@ namespace BSPPackStandalone
 				Console.WriteLine($"Error creating configuration file: {ex.Message}");
 			}
 		}
-		
-		
+
+
 		public static void LoadConfig(string filePath)
 		{
 			Console.WriteLine("Loading config.ini...");
@@ -76,14 +83,14 @@ namespace BSPPackStandalone
 			{
 				CreateDefaultConfigFile(filePath);
 			}
-			
+
 			bool configLoaded = true;
 
 			string currentSection = "";
 			foreach (var line in File.ReadLines(filePath))
 			{
 				if (line.StartsWith("#"))
-				continue;
+					continue;
 
 				if (line.StartsWith("[") && line.EndsWith("]"))
 				{
@@ -91,39 +98,39 @@ namespace BSPPackStandalone
 					continue;
 				}
 
-			var trimmedLine = line.Trim().Trim('"');
+				var trimmedLine = line.Trim().Trim('"');
 				switch (currentSection)
 				{
 					case "GameFolder":
 						string gameinfo = Path.Combine(trimmedLine, "gameinfo.txt");
 						if (!File.Exists(gameinfo))
 						{
-							Console.WriteLine($"gameinfo.txt not found in provided game directory ( {trimmedLine} ).");
+							Message.Error($"gameinfo.txt not found in provided game directory ( {trimmedLine} ).");
 							configLoaded = false;
 							break;
 						}
-						Config.GameFolder = trimmedLine;
+						GameFolder = trimmedLine;
 						break;
 
 					case "SteamPath":
 						string steamapps = Path.Combine(trimmedLine, "steamapps");
 						if (!Directory.Exists(steamapps))
 						{
-							Console.WriteLine($"steamapps not found in provided Steam directory ( {trimmedLine} ).");
+							Message.Error($"steamapps not found in provided Steam directory ( {trimmedLine} ).");
 							configLoaded = false;
 							break;
 						}
-						Config.SteamAppsPath = steamapps;
+						SteamAppsPath = steamapps;
 						break;
 				}
 			}
-			
-			if(!configLoaded)
+
+			if (!configLoaded)
 				Environment.Exit(1);
-			
+
 			InitializeConfig();
 		}
-		
+
 		private static void CreateDefaultConfigFile(string filePath)
 		{
 			var lines = new List<string>

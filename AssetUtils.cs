@@ -17,6 +17,9 @@ namespace BSPPackStandalone
 
         public static Tuple<List<string>, List<string>> FindMdlMaterialsAndModels(string path, List<int>? skins = null, List<string>? vtxVmts = null)
         {
+            skins ??= [];
+            vtxVmts ??= [];
+
             List<string> materials = [];
             List<string> models = [];
 
@@ -73,7 +76,7 @@ namespace BSPPackStandalone
                     {
                         if (texture.Any(char.IsUpper))
                         {
-                            Console.WriteLine("\u001b[33m\nWARNING: Model " + texture + " references it's vmt file using uppercase; however, on Linux/macOS, all filenames are assumed to be lowercase.\nIf it doesn't pack correctly, please change the filename of the vmt to lowercase.\n\u001b[0m");
+                            Message.Warning("WARNING: Model " + texture + " references it's vmt file using uppercase; however, on Linux/macOS, all filenames are assumed to be lowercase.\nIf it doesn't pack correctly, please change the filename of the vmt to lowercase.");
                         }
                         texture = texture.ToLower();
                     }
@@ -397,9 +400,7 @@ namespace BSPPackStandalone
                 }
                 catch (Exception)
                 {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"WARNING: Deserializing Textures KV Failed");
-                    Console.ResetColor();
+                    Message.Warning($"WARNING: Deserializing Textures KV Failed");
                     return vtfList;
                 }
 
@@ -428,9 +429,7 @@ namespace BSPPackStandalone
                 }
                 catch (Exception)
                 {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"WARNING: Deserializing Materials KV Failed");
-                    Console.ResetColor();
+                    Message.Warning($"WARNING: Deserializing Materials KV Failed");
                     return vmtList;
                 }
 
@@ -501,10 +500,8 @@ namespace BSPPackStandalone
             var line = value.ToString();
             if (line is null)
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"WARNING: Failed to parse VMT line value: {value}");
-                Console.WriteLine($"WARNING: KVSerializer.Deserialize returned null: {value}");
-                Console.ResetColor();
+                Message.Warning($"WARNING: Failed to parse VMT line value: {value}");
+                Message.Warning($"WARNING: KVSerializer.Deserialize returned null: {value}");
                 line = "";
             }
 
@@ -615,9 +612,7 @@ namespace BSPPackStandalone
                     Match m = functionParametersRegex.Match(cleanStatement);
                     if (!m.Success)
                     {
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"WARNING: Failed to parse function arguments {cleanStatement} in file: {fullpath}");
-                        Console.ResetColor();
+                        Message.Warning($"WARNING: Failed to parse function arguments {cleanStatement} in file: {fullpath}");
                         continue;
                     }
 
@@ -663,9 +658,9 @@ namespace BSPPackStandalone
             // those are manifests, soundscapes, nav, radar and detail files
 
             // Soundscape file
-            string internalPath = "scripts/soundscapes_" + bsp.file.Name.Replace(".bsp", ".txt");
+            string internalPath = "scripts/soundscapes_" + bsp.File.Name.Replace(".bsp", ".txt");
             // Soundscapes can have either .txt or .vsc extensions
-            string internalPathVsc = "scripts/soundscapes_" + bsp.file.Name.Replace(".bsp", ".vsc");
+            string internalPathVsc = "scripts/soundscapes_" + bsp.File.Name.Replace(".bsp", ".vsc");
             foreach (string source in sourceDirectories)
             {
                 string externalPath = source + "/" + internalPath;
@@ -673,31 +668,31 @@ namespace BSPPackStandalone
 
                 if (File.Exists(externalPath))
                 {
-                    bsp.soundscape = new KeyValuePair<string, string>(internalPath, externalPath);
+                    bsp.Soundscape = new KeyValuePair<string, string>(internalPath, externalPath);
                     break;
                 }
                 if (File.Exists(externalVscPath))
                 {
-                    bsp.soundscape = new KeyValuePair<string, string>(internalPathVsc, externalVscPath);
+                    bsp.Soundscape = new KeyValuePair<string, string>(internalPathVsc, externalVscPath);
                     break;
                 }
             }
 
             // Soundscript file
-            internalPath = "maps/" + bsp.file.Name.Replace(".bsp", "") + "_level_sounds.txt";
+            internalPath = "maps/" + bsp.File.Name.Replace(".bsp", "") + "_level_sounds.txt";
             foreach (string source in sourceDirectories)
             {
                 string externalPath = source + "/" + internalPath;
 
                 if (File.Exists(externalPath))
                 {
-                    bsp.soundscript = new KeyValuePair<string, string>(internalPath, externalPath);
+                    bsp.Soundscript = new KeyValuePair<string, string>(internalPath, externalPath);
                     break;
                 }
             }
 
             // Nav file (.nav)
-            internalPath = "maps/" + bsp.file.Name.Replace(".bsp", ".nav");
+            internalPath = "maps/" + bsp.File.Name.Replace(".bsp", ".nav");
             foreach (string source in sourceDirectories)
             {
                 string externalPath = source + "/" + internalPath;
@@ -706,13 +701,13 @@ namespace BSPPackStandalone
                 {
                     if (renamenav)
                         internalPath = "maps/embed.nav";
-                    bsp.nav = new KeyValuePair<string, string>(internalPath, externalPath);
+                    bsp.Nav = new KeyValuePair<string, string>(internalPath, externalPath);
                     break;
                 }
             }
 
             // detail file (.vbsp)
-            Dictionary<string, string> worldspawn = bsp.entityList.FirstOrDefault(item => item["classname"] == "worldspawn", []);
+            Dictionary<string, string> worldspawn = bsp.EntityList.FirstOrDefault(item => item["classname"] == "worldspawn", []);
             if (worldspawn.TryGetValue("detailvbsp", out var detailvbsp))
             {
                 internalPath = detailvbsp;
@@ -723,7 +718,7 @@ namespace BSPPackStandalone
 
                     if (File.Exists(externalPath))
                     {
-                        bsp.detail = new KeyValuePair<string, string>(internalPath, externalPath);
+                        bsp.Detail = new KeyValuePair<string, string>(internalPath, externalPath);
                         break;
                     }
                 }
@@ -732,7 +727,7 @@ namespace BSPPackStandalone
 
             // Vehicle scripts
             List<KeyValuePair<string, string>> vehicleScripts = [];
-            foreach (Dictionary<string, string> ent in bsp.entityList)
+            foreach (Dictionary<string, string> ent in bsp.EntityList)
             {
                 if (ent.TryGetValue("vehiclescript", out var vehiclescript))
                 {
@@ -751,7 +746,7 @@ namespace BSPPackStandalone
 
             // Effect Scripts
             List<KeyValuePair<string, string>> effectScripts = [];
-            foreach (Dictionary<string, string> ent in bsp.entityList)
+            foreach (Dictionary<string, string> ent in bsp.EntityList)
             {
                 if (ent.TryGetValue("scriptfile", out var scriptfile))
                 {
@@ -769,7 +764,7 @@ namespace BSPPackStandalone
             bsp.EffectScriptList = effectScripts;
 
             // Res files (for tf2's pd gamemode)
-            foreach (Dictionary<string, string> ent in bsp.entityList)
+            foreach (Dictionary<string, string> ent in bsp.EntityList)
             {
                 if (ent.TryGetValue("res_file", out var resFile))
                 {
@@ -778,7 +773,7 @@ namespace BSPPackStandalone
                         string externalPath = source + "/" + resFile;
                         if (File.Exists(externalPath))
                         {
-                            bsp.res.Add(new KeyValuePair<string, string>(resFile, externalPath));
+                            bsp.Res.Add(new KeyValuePair<string, string>(resFile, externalPath));
                             break;
                         }
                     }
@@ -786,18 +781,18 @@ namespace BSPPackStandalone
             }
 
             // tf2 tc round overview files
-            internalPath = "resource/roundinfo/" + bsp.file.Name.Replace(".bsp", ".res");
+            internalPath = "resource/roundinfo/" + bsp.File.Name.Replace(".bsp", ".res");
             foreach (string source in sourceDirectories)
             {
                 string externalPath = source + "/" + internalPath;
 
                 if (File.Exists(externalPath))
                 {
-                    bsp.res.Add(new KeyValuePair<string, string>(internalPath, externalPath));
+                    bsp.Res.Add(new KeyValuePair<string, string>(internalPath, externalPath));
                     break;
                 }
             }
-            internalPath = "materials/overviews/" + bsp.file.Name.Replace(".bsp", ".vmt");
+            internalPath = "materials/overviews/" + bsp.File.Name.Replace(".bsp", ".vmt");
             foreach (string source in sourceDirectories)
             {
                 string externalPath = source + "/" + internalPath;
@@ -810,7 +805,7 @@ namespace BSPPackStandalone
             }
 
             // Radar file
-            internalPath = "resource/overviews/" + bsp.file.Name.Replace(".bsp", ".txt");
+            internalPath = "resource/overviews/" + bsp.File.Name.Replace(".bsp", ".txt");
             List<KeyValuePair<string, string>> ddsfiles = [];
             foreach (string source in sourceDirectories)
             {
@@ -818,7 +813,7 @@ namespace BSPPackStandalone
 
                 if (File.Exists(externalPath))
                 {
-                    bsp.radartxt = new KeyValuePair<string, string>(internalPath, externalPath);
+                    bsp.Radartxt = new KeyValuePair<string, string>(internalPath, externalPath);
                     bsp.TextureList.AddRange(FindVmtMaterials(externalPath));
 
                     List<string> ddsInternalPaths = FindRadarDdsFiles(externalPath);
@@ -838,10 +833,10 @@ namespace BSPPackStandalone
                     break;
                 }
             }
-            bsp.radardds = ddsfiles;
+            bsp.Radardds = ddsfiles;
 
             // cs:s radar materials
-            internalPath = $"materials/overviews/{Path.GetFileNameWithoutExtension(bsp.file.Name)}_radar.vmt";
+            internalPath = $"materials/overviews/{Path.GetFileNameWithoutExtension(bsp.File.Name)}_radar.vmt";
             foreach (string source in sourceDirectories)
             {
                 string externalPath = source + "/" + internalPath;
@@ -854,39 +849,39 @@ namespace BSPPackStandalone
             }
 
             // csgo kv file (.kv)
-            internalPath = "maps/" + bsp.file.Name.Replace(".bsp", ".kv");
+            internalPath = "maps/" + bsp.File.Name.Replace(".bsp", ".kv");
             foreach (string source in sourceDirectories)
             {
                 string externalPath = source + "/" + internalPath;
 
                 if (File.Exists(externalPath))
                 {
-                    bsp.kv = new KeyValuePair<string, string>(internalPath, externalPath);
+                    bsp.Kv = new KeyValuePair<string, string>(internalPath, externalPath);
                     break;
                 }
             }
 
             // csgo loading screen text file (.txt)
-            internalPath = "maps/" + bsp.file.Name.Replace(".bsp", ".txt");
+            internalPath = "maps/" + bsp.File.Name.Replace(".bsp", ".txt");
             foreach (string source in sourceDirectories)
             {
                 string externalPath = source + "/" + internalPath;
 
                 if (File.Exists(externalPath))
                 {
-                    bsp.txt = new KeyValuePair<string, string>(internalPath, externalPath);
+                    bsp.Txt = new KeyValuePair<string, string>(internalPath, externalPath);
                     break;
                 }
             }
 
             // csgo loading screen image (.jpg)
-            internalPath = "maps/" + bsp.file.Name.Replace(".bsp", "");
+            internalPath = "maps/" + bsp.File.Name.Replace(".bsp", "");
             foreach (string source in sourceDirectories)
             {
                 string externalPath = source + "/" + internalPath;
                 foreach (string extension in new[] { ".jpg", ".jpeg" })
                     if (File.Exists(externalPath + extension))
-                        bsp.jpg = new KeyValuePair<string, string>(internalPath + ".jpg", externalPath + extension);
+                        bsp.Jpg = new KeyValuePair<string, string>(internalPath + ".jpg", externalPath + extension);
             }
 
             // csgo panorama map backgrounds (.png)
@@ -895,7 +890,7 @@ namespace BSPPackStandalone
             foreach (string source in sourceDirectories)
             {
                 string externalPath = source + "/" + internalPath;
-                string bspName = bsp.file.Name.Replace(".bsp", "");
+                string bspName = bsp.File.Name.Replace(".bsp", "");
 
                 foreach (string resolution in new[] { "360p", "1080p" })
                     if (File.Exists($"{externalPath}{resolution}/{bspName}.png"))
@@ -908,14 +903,14 @@ namespace BSPPackStandalone
             foreach (string source in sourceDirectories)
             {
                 string externalPath = source + "/" + internalPath;
-                string bspName = bsp.file.Name.Replace(".bsp", "");
+                string bspName = bsp.File.Name.Replace(".bsp", "");
                 foreach (string extension in new[] { ".svg" })
                     if (File.Exists($"{externalPath}map_icon_{bspName}{extension}"))
                         bsp.PanoramaMapIcon = new KeyValuePair<string, string>($"{internalPath}map_icon_{bspName}{extension}", $"{externalPath}map_icon_{bspName}{extension}");
             }
 
             // csgo dz tablets
-            internalPath = "materials/models/weapons/v_models/tablet/tablet_radar_" + bsp.file.Name.Replace(".bsp", ".vtf");
+            internalPath = "materials/models/weapons/v_models/tablet/tablet_radar_" + bsp.File.Name.Replace(".bsp", ".vtf");
             foreach (string source in sourceDirectories)
             {
                 string externalPath = source + "/" + internalPath;
@@ -930,7 +925,7 @@ namespace BSPPackStandalone
             // language files, particle manifests and soundscript file
             // (these language files are localized text files for tf2 mission briefings)
             string internalDir = "maps/";
-            string name = bsp.file.Name.Replace(".bsp", "");
+            string name = bsp.File.Name.Replace(".bsp", "");
             string searchPattern = name + "*.txt";
             List<KeyValuePair<string, string>> langfiles = [];
 
@@ -946,24 +941,24 @@ namespace BSPPackStandalone
                         if (f.Name.StartsWith(name + "_particles") || f.Name.StartsWith(name + "_manifest"))
                         {
                             if (!genparticlemanifest)
-                                bsp.particleManifest = new KeyValuePair<string, string>(internalDir + f.Name, externalDir + f.Name);
+                                bsp.ParticleManifest = new KeyValuePair<string, string>(internalDir + f.Name, externalDir + f.Name);
                             continue;
                         }
                         // soundscript
                         if (f.Name.StartsWith(name + "_level_sounds"))
-                            bsp.soundscript =
+                            bsp.Soundscript =
                                 new KeyValuePair<string, string>(internalDir + f.Name, externalDir + f.Name);
                         // presumably language files
                         else
                             langfiles.Add(new KeyValuePair<string, string>(internalDir + f.Name, externalDir + f.Name));
                     }
             }
-            bsp.languages = langfiles;
+            bsp.Languages = langfiles;
 
             // ASW/Source2009 branch VScripts
             List<string> vscripts = [];
 
-            foreach (Dictionary<string, string> entity in bsp.entityList)
+            foreach (Dictionary<string, string> entity in bsp.EntityList)
             {
                 foreach (KeyValuePair<string, string> kvp in entity)
                 {
@@ -977,7 +972,7 @@ namespace BSPPackStandalone
                     }
                 }
             }
-            bsp.vscriptList = vscripts.Distinct().ToList();
+            bsp.VscriptList = vscripts.Distinct().ToList();
         }
 
         private static string ReadNullTerminatedString(FileStream fs, BinaryReader reader)
@@ -997,7 +992,7 @@ namespace BSPPackStandalone
         {
             List<string> sourceDirectories = [];
             string gameInfoPath = System.IO.Path.Combine(gamePath, "gameinfo.txt");
-            string rootPath = Directory.GetParent(gamePath).ToString();
+            string rootPath = Directory.GetParent(gamePath)!.ToString();
 
             if (!File.Exists(gameInfoPath))
             {
@@ -1199,7 +1194,7 @@ namespace BSPPackStandalone
                 // create list of steam ID's and their base path
                 foreach (var folder in libraries.Children)
                 {
-                    var basePath = Path.Combine(folder["path"].ToString(), "steamapps");
+                    var basePath = Path.Combine(folder["path"].ToString()!, "steamapps");
                     var ids = folder["apps"] as IEnumerable<KVObject>;
                     if (ids == null) continue;
 
@@ -1231,7 +1226,7 @@ namespace BSPPackStandalone
                         continue;
                     }
 
-                    paths[steamId] = Path.Combine(basePath, "common", appManifest["installdir"].ToString());
+                    paths[steamId] = Path.Combine(basePath, "common", appManifest["installdir"].ToString()!);
                 }
             }
 
@@ -1262,7 +1257,7 @@ namespace BSPPackStandalone
                     if (mountType != "dir")
                         continue;
 
-                    string subdir = subdirMount.Value.ToString();
+                    string subdir = subdirMount.Value.ToString()!;
                     directories.Add(Path.Combine(gameLocation, folder, subdir));
                 }
             }

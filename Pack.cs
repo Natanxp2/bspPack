@@ -94,9 +94,7 @@ Please provide path to BSP.
 				if (lowercase)
 					return;
 
-				Console.ForegroundColor = ConsoleColor.Red;
-				Console.WriteLine("File not found: " + Config.BSPFile);
-				Console.ResetColor();
+				Message.Error("File not found: " + Config.BSPFile);
 				return;
 			}
 
@@ -104,14 +102,14 @@ Please provide path to BSP.
 				LoadPathsFromFile(Path.Combine(Config.ExeDirectory, "ResourceConfig.ini"));
 
 			Console.WriteLine("Reading BSP...");
-			FileInfo fileInfo = new FileInfo(Config.BSPFile);
+			FileInfo fileInfo = new(Config.BSPFile);
 			BSP bsp = LoadBSP(fileInfo);
 
 			string unpackDir;
 
 			if (unpack)
 			{
-				unpackDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Path.GetFileNameWithoutExtension(bsp.file.FullName) + "_unpacked");
+				unpackDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Path.GetFileNameWithoutExtension(bsp.File.FullName) + "_unpacked");
 				AssetUtils.UnpackBSP(unpackDir);
 				Console.WriteLine($"BSP unpacked to: {unpackDir}");
 				return;
@@ -136,9 +134,7 @@ Please provide path to BSP.
 					var globResults = Glob.Directories(root, dir.Substring(root.Length), globOptions);
 					if (!globResults.Any())
 					{
-						Console.ForegroundColor = ConsoleColor.Yellow;
-						Console.WriteLine($"WARNING: Found no matching folders for: {dir}\n");
-						Console.ResetColor();
+						Message.Warning($"WARNING: Found no matching folders for: {dir}\n");
 						continue;
 					}
 
@@ -153,13 +149,13 @@ Please provide path to BSP.
 			AssetUtils.FindBspUtilityFiles(bsp, sourceDirectories, renamenav, false);
 
 			if (dryrun)
-				outputFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BSPZipFiles", $"{Path.GetFileNameWithoutExtension(bsp.file.FullName)}_files.txt");
+				outputFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BSPZipFiles", $"{Path.GetFileNameWithoutExtension(bsp.File.FullName)}_files.txt");
 
 			if (includeDirs.Count != 0)
 				GetFilesFromIncludedDirs();
 
 			Console.WriteLine("\nInitializing pak file...");
-			PakFile pakfile = new PakFile(bsp, sourceDirectories, includeFiles, excludeFiles, excludeDirs, excludeVpkFiles, outputFile, noswvtx);
+			PakFile pakfile = new(bsp, sourceDirectories, includeFiles, excludeFiles, excludeDirs, excludeVpkFiles, outputFile, noswvtx);
 
 			if (includeFileLists.Count != 0)
 			{
@@ -174,11 +170,7 @@ Please provide path to BSP.
 						var internalPath = fileList[i];
 						var externalPath = fileList[i + 1];
 						if (!pakfile.AddInternalFile(internalPath, externalPath))
-						{
-							Console.ForegroundColor = ConsoleColor.Yellow;
-							Console.WriteLine($"Failed to pack {externalPath}. This may indicate a duplicate file");
-							Console.ResetColor();
-						}
+							Message.Warning($"WARNING: Failed to pack {externalPath}. This may indicate a duplicate file");
 					}
 					Console.WriteLine($"Added {fileList.Length / 2} files from {file}");
 				}
@@ -190,16 +182,14 @@ Please provide path to BSP.
 			if (dryrun)
 			{
 				Directory.Delete(Config.TempFolder, true);
-				Console.ForegroundColor = ConsoleColor.Green;
-				Console.WriteLine($"Dry run finished! File saved to {outputFile}");
-				Console.ResetColor();
+				Message.Success($"Dry run finished! File saved to {outputFile}");
 				return;
 			}
 
 			if (particlemanifest)
 			{
-				ParticleManifest manifest = new ParticleManifest(sourceDirectories, excludeDirs, excludeFiles, bsp, Config.BSPFile, Config.GameFolder);
-				bsp.particleManifest = manifest.particleManifest;
+				ParticleManifest manifest = new(sourceDirectories, excludeDirs, excludeFiles, bsp, Config.BSPFile, Config.GameFolder);
+				bsp.ParticleManifest = manifest.particleManifest;
 			}
 
 			Console.WriteLine("Running bspzip...");
@@ -212,9 +202,7 @@ Please provide path to BSP.
 			}
 
 			Directory.Delete(Config.TempFolder, true);
-			Console.ForegroundColor = ConsoleColor.Green;
-			Console.WriteLine("Finished!");
-			Console.ResetColor();
+			Message.Success("Finished!");
 		}
 
 		static BSP LoadBSP(FileInfo fileInfo)
@@ -225,20 +213,18 @@ Please provide path to BSP.
 			{
 				try
 				{
-					BSP bsp = new BSP(fileInfo);
+					BSP bsp = new(fileInfo);
 					return bsp;
 				}
 				catch (Exception ex)
 				{
 					if (attempt)
 					{
-						Console.ForegroundColor = ConsoleColor.Red;
-						Console.WriteLine("ERROR: Decompression failed, exiting.");
-						Console.ResetColor();
-						return null;
+						Message.Error("ERROR: Decompression failed, exiting.");
+						Environment.Exit(1);
 					}
 					Console.WriteLine($"{ex.Message}");
-					CompressBSP(true);
+					CompressBSP(decompress: true);
 					attempt = true;
 				}
 			}
@@ -248,9 +234,7 @@ Please provide path to BSP.
 		{
 			if (!File.Exists(filePath))
 			{
-				Console.ForegroundColor = ConsoleColor.Red;
-				Console.WriteLine($"{filePath} not found, run 'bspPack --modify' to create it");
-				Console.ResetColor();
+				Message.Error($"{filePath} not found, run 'bspPack --modify' to create it");
 				System.Environment.Exit(1);
 			}
 
@@ -271,9 +255,7 @@ Please provide path to BSP.
 					case "IncludeFiles":
 						if (!File.Exists(trimmedLine))
 						{
-							Console.ForegroundColor = ConsoleColor.Yellow;
-							Console.WriteLine($"WARNING: Could not find file {trimmedLine}");
-							Console.ResetColor();
+							Message.Warning($"WARNING: Could not find file {trimmedLine}");
 							break;
 						}
 						includeFiles.Add(trimmedLine);
@@ -281,9 +263,7 @@ Please provide path to BSP.
 					case "IncludeFileLists":
 						if (!File.Exists(trimmedLine))
 						{
-							Console.ForegroundColor = ConsoleColor.Yellow;
-							Console.WriteLine($"WARNING: Could not find file {trimmedLine}");
-							Console.ResetColor();
+							Message.Warning($"WARNING: Could not find file {trimmedLine}");
 							break;
 						}
 						includeFileLists.Add(trimmedLine);
@@ -291,9 +271,7 @@ Please provide path to BSP.
 					case "IncludeDirs":
 						if (!Directory.Exists(trimmedLine))
 						{
-							Console.ForegroundColor = ConsoleColor.Yellow;
-							Console.WriteLine($"WARNING: Could not find directory {trimmedLine}");
-							Console.ResetColor();
+							Message.Warning($"WARNING: Could not find directory {trimmedLine}");
 							break;
 						}
 						includeDirs.Add(trimmedLine);
@@ -301,9 +279,7 @@ Please provide path to BSP.
 					case "IncludeSourceDirectories":
 						if (!Directory.Exists(trimmedLine))
 						{
-							Console.ForegroundColor = ConsoleColor.Yellow;
-							Console.WriteLine($"WARNING: Could not find directory {trimmedLine}");
-							Console.ResetColor();
+							Message.Warning($"WARNING: Could not find directory {trimmedLine}");
 							break;
 						}
 						includeSourceDirectories.Add(trimmedLine);
@@ -311,9 +287,7 @@ Please provide path to BSP.
 					case "ExcludeFiles":
 						if (!File.Exists(trimmedLine))
 						{
-							Console.ForegroundColor = ConsoleColor.Yellow;
-							Console.WriteLine($"WARNING: Could not find file {trimmedLine}");
-							Console.ResetColor();
+							Message.Warning($"WARNING: Could not find file {trimmedLine}");
 							break;
 						}
 						Console.WriteLine($"EXCLUDED FILE: {trimmedLine.Replace('\\', '/')}");
@@ -322,9 +296,7 @@ Please provide path to BSP.
 					case "ExcludeDirs":
 						if (!Directory.Exists(trimmedLine))
 						{
-							Console.ForegroundColor = ConsoleColor.Yellow;
-							Console.WriteLine($"WARNING: Could not find directory {trimmedLine}");
-							Console.ResetColor();
+							Message.Warning($"WARNING: Could not find directory {trimmedLine}");
 							break;
 						}
 						excludeDirs.Add(trimmedLine.Replace("\\", "/"));
@@ -332,9 +304,7 @@ Please provide path to BSP.
 					case "ExcludeVpkFiles":
 						if (!File.Exists(trimmedLine))
 						{
-							Console.ForegroundColor = ConsoleColor.Yellow;
-							Console.WriteLine($"WARNING: Could not find file {trimmedLine}");
-							Console.ResetColor();
+							Message.Warning($"WARNING: Could not find file {trimmedLine}");
 							break;
 						}
 						excludeVpkFiles.Add(trimmedLine);
@@ -381,10 +351,8 @@ Please provide path to BSP.
 			}
 			catch (Exception e)
 			{
-				Console.ForegroundColor = ConsoleColor.Red;
-				Console.WriteLine(e.ToString());
-				Console.WriteLine($"Failed to run executable: {p.StartInfo.FileName}\n");
-				Console.ResetColor();
+				Message.Error(e.ToString());
+				Message.Error($"Failed to run executable: {p.StartInfo.FileName}\n");
 				return;
 			}
 
@@ -395,14 +363,11 @@ Please provide path to BSP.
 			p.WaitForExit();
 			if (p.ExitCode != 0)
 			{
-				Console.ForegroundColor = ConsoleColor.Red;
 				// this indicates an access violation. BSPZIP may have crashed because of too many files being packed
 				if (p.ExitCode == -1073741819)
-					Console.WriteLine($"BSPZIP exited with code: {p.ExitCode}, this might indicate that too many files are being packed\n");
+					Message.Error($"BSPZIP exited with code: {p.ExitCode}, this might indicate that too many files are being packed\n");
 				else
-					Console.WriteLine($"BSPZIP exited with code: {p.ExitCode}\n");
-
-				Console.ResetColor();
+					Message.Error($"BSPZIP exited with code: {p.ExitCode}\n");
 			}
 
 		}
@@ -437,10 +402,8 @@ Please provide path to BSP.
 			}
 			catch (Exception e)
 			{
-				Console.ForegroundColor = ConsoleColor.Red;
-				Console.WriteLine(e.ToString());
-				Console.WriteLine($"Failed to run executable: {p.StartInfo.FileName}\n");
-				Console.ResetColor();
+				Message.Error(e.ToString());
+				Message.Error($"Failed to run executable: {p.StartInfo.FileName}");
 				return;
 			}
 
@@ -451,14 +414,11 @@ Please provide path to BSP.
 			p.WaitForExit();
 			if (p.ExitCode != 0)
 			{
-				Console.ForegroundColor = ConsoleColor.Red;
 				// this indicates an access violation. BSPZIP may have crashed because of too many files being packed
 				if (p.ExitCode == -1073741819)
-					Console.WriteLine($"BSPZIP exited with code: {p.ExitCode}, this might indicate that too many files are being packed\n");
+					Message.Error($"BSPZIP exited with code: {p.ExitCode}, this might indicate that too many files are being packed");
 				else
-					Console.WriteLine($"BSPZIP exited with code: {p.ExitCode}\n");
-
-				Console.ResetColor();
+					Message.Error($"BSPZIP exited with code: {p.ExitCode}");
 			}
 		}
 
@@ -467,24 +427,16 @@ Please provide path to BSP.
 			string materialsPath = Path.Join(Config.GameFolder, "materials");
 
 			if (!Directory.Exists(materialsPath))
-			{
-				Console.ForegroundColor = ConsoleColor.Red;
-				Console.WriteLine($"Directory doesn't exist: {materialsPath}, lowercasing cancelled");
-				Console.ResetColor();
-			}
+				Message.Error($"Directory doesn't exist: {materialsPath}, lowercasing cancelled");
 
-			Console.ForegroundColor = ConsoleColor.Yellow;
-			Console.WriteLine($"You are trying to lowercase all directories, files, and content of .vmt files in:\n{materialsPath}");
-			Console.WriteLine("Please make sure you have a backup in case something goes wrong");
-			Console.WriteLine("Do you want to continue? [y/N]");
-			Console.ResetColor();
+			Message.Warning($"You are trying to lowercase all directories, files, and content of .vmt files in:\n{materialsPath}");
+			Message.Warning("Please make sure you have a backup in case something goes wrong!");
+			string? input = Message.Prompt("Do you want to continue? [y/N]: ", ConsoleColor.Yellow);
 
-			string? input = Console.ReadLine();
 			if (string.IsNullOrWhiteSpace(input) || !input.Trim().StartsWith("y", StringComparison.CurrentCultureIgnoreCase))
 			{
-				Console.ForegroundColor = ConsoleColor.Red;
-				Console.WriteLine("Lowercasing Cancelled");
-				Console.ResetColor();
+				Message.Error("Lowercasing Cancelled, exiting");
+				Environment.Exit(0);
 			}
 
 			ProcessDirectories(materialsPath);
@@ -535,9 +487,7 @@ Please provide path to BSP.
 
 			}
 
-			Console.ForegroundColor = ConsoleColor.Green;
-			Console.WriteLine("Files and Directories successfully lowercased!");
-			Console.ResetColor();
+			Message.Success("Files and Directories successfully lowercased!");
 		}
 	}
 }

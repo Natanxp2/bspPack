@@ -15,85 +15,85 @@ namespace BSPPackStandalone
 
     class BSP
     {
-        private KeyValuePair<int, int>[] offsets; // offset/length
+        private readonly KeyValuePair<int, int>[] Offsets; // offset/length
         private static readonly char[] SpecialCaracters = { '*', '#', '@', '>', '<', '^', '(', ')', '}', '$', '!', '?', ' ' };
 
-        public List<Dictionary<string, string>> entityList { get; private set; }
+        public List<Dictionary<string, string>> EntityList { get; private set; } = [];
 
-        public List<List<Tuple<string, string>>> entityListArrayForm { get; private set; }
+        public List<List<Tuple<string, string>>> EntityListArrayForm { get; private set; } = [];
 
-        public List<int>[] modelSkinList { get; private set; }
+        public List<int>[] ModelSkinList { get; private set; } = [];
 
-        public List<string> ModelList { get; private set; }
+        public List<string> ModelList { get; private set; } = [];
 
-        public List<string> EntModelList { get; private set; }
+        public List<string> EntModelList { get; private set; } = [];
 
-        public List<string> ParticleList { get; private set; }
+        public List<string> ParticleList { get; private set; } = [];
 
-        public List<string> TextureList { get; private set; }
-        public List<string> EntTextureList { get; private set; }
+        public List<string> TextureList { get; private set; } = [];
+        public List<string> EntTextureList { get; private set; } = [];
 
-        public List<string> EntSoundList { get; private set; }
+        public List<string> EntSoundList { get; private set; } = [];
 
-        public List<string> MiscList { get; private set; }
+        public List<string> MiscList { get; private set; } = [];
 
         // key/values as internalPath/externalPath
-        public KeyValuePair<string, string> particleManifest { get; set; }
-        public KeyValuePair<string, string> soundscript { get; set; }
-        public KeyValuePair<string, string> soundscape { get; set; }
-        public KeyValuePair<string, string> detail { get; set; }
-        public KeyValuePair<string, string> nav { get; set; }
-        public List<KeyValuePair<string, string>> res { get; } = [];
-        public KeyValuePair<string, string> kv { get; set; }
-        public KeyValuePair<string, string> txt { get; set; }
-        public KeyValuePair<string, string> jpg { get; set; }
-        public KeyValuePair<string, string> radartxt { get; set; }
-        public List<KeyValuePair<string, string>> radardds { get; set; }
+        public KeyValuePair<string, string> ParticleManifest { get; set; }
+        public KeyValuePair<string, string> Soundscript { get; set; }
+        public KeyValuePair<string, string> Soundscape { get; set; }
+        public KeyValuePair<string, string> Detail { get; set; }
+        public KeyValuePair<string, string> Nav { get; set; }
+        public List<KeyValuePair<string, string>> Res { get; } = [];
+        public KeyValuePair<string, string> Kv { get; set; }
+        public KeyValuePair<string, string> Txt { get; set; }
+        public KeyValuePair<string, string> Jpg { get; set; }
+        public KeyValuePair<string, string> Radartxt { get; set; }
+        public List<KeyValuePair<string, string>> Radardds { get; set; } = [];
         public KeyValuePair<string, string> RadarTablet { get; set; }
-        public List<KeyValuePair<string, string>> languages { get; set; }
-        public List<KeyValuePair<string, string>> VehicleScriptList { get; set; }
-        public List<KeyValuePair<string, string>> EffectScriptList { get; set; }
-        public List<string> vscriptList { get; set; }
-        public List<KeyValuePair<string, string>> PanoramaMapBackgrounds { get; set; }
+        public List<KeyValuePair<string, string>> Languages { get; set; } = [];
+        public List<KeyValuePair<string, string>> VehicleScriptList { get; set; } = [];
+        public List<KeyValuePair<string, string>> EffectScriptList { get; set; } = [];
+        public List<string> VscriptList { get; set; } = [];
+        public List<KeyValuePair<string, string>> PanoramaMapBackgrounds { get; set; } = [];
         public KeyValuePair<string, string> PanoramaMapIcon { get; set; }
 
-        public FileInfo file { get; private set; }
-        private bool isL4D2 = false;
-        private int bspVersion;
+        public FileInfo File { get; private set; }
+        private readonly bool IsL4D2 = false;
+        private readonly int BspVersion;
 
         public BSP(FileInfo file)
         {
-            this.file = file;
-            offsets = new KeyValuePair<int, int>[64];
+            this.File = file;
+            Offsets = new KeyValuePair<int, int>[64];
 
             using (var bsp = new FileStream(file.FullName, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 using (var reader = new BinaryReader(bsp))
                 {
                     bsp.Seek(4, SeekOrigin.Begin); // skip header
-                    this.bspVersion = reader.ReadInt32();
+                    this.BspVersion = reader.ReadInt32();
 
-                    if (reader.ReadInt32() == 0 && this.bspVersion == 21)
-                        isL4D2 = true;
+                    if (reader.ReadInt32() == 0 && this.BspVersion == 21)
+                        IsL4D2 = true;
 
                     bsp.Seek(-4, SeekOrigin.Current);
 
-                    for (int i = 0; i < offsets.GetLength(0); i++)
+                    for (int i = 0; i < Offsets.GetLength(0); i++)
                     {
-                        if (isL4D2)
+                        if (IsL4D2)
                         {
                             bsp.Seek(4, SeekOrigin.Current);
-                            offsets[i] = new KeyValuePair<int, int>(reader.ReadInt32(), reader.ReadInt32());
+                            Offsets[i] = new KeyValuePair<int, int>(reader.ReadInt32(), reader.ReadInt32());
                             bsp.Seek(4, SeekOrigin.Current);
                         }
                         else
                         {
-                            offsets[i] = new KeyValuePair<int, int>(reader.ReadInt32(), reader.ReadInt32());
+                            Offsets[i] = new KeyValuePair<int, int>(reader.ReadInt32(), reader.ReadInt32());
                             bsp.Seek(8, SeekOrigin.Current);
                         }
                     }
 
-                    bsp.Seek(offsets[0].Key, SeekOrigin.Begin);
+                    bsp.Seek(Offsets[0].Key, SeekOrigin.Begin);
                     if (reader.ReadChars(4).SequenceEqual("LZMA".ToCharArray()))
                     {
                         throw new FormatException("BSP is compressed. Trying to decompress...");
@@ -113,11 +113,11 @@ namespace BSPPackStandalone
 
         public void buildEntityList(FileStream bsp, BinaryReader reader)
         {
-            entityList = [];
-            entityListArrayForm = [];
+            EntityList = [];
+            EntityListArrayForm = [];
 
-            bsp.Seek(offsets[0].Key, SeekOrigin.Begin);
-            byte[] ent = reader.ReadBytes(offsets[0].Value);
+            bsp.Seek(Offsets[0].Key, SeekOrigin.Begin);
+            byte[] ent = reader.ReadBytes(Offsets[0].Value);
             List<byte> ents = [];
 
             const int LCURLY = 123;
@@ -159,8 +159,8 @@ namespace BSPPackStandalone
                             entityArrayFormat.Add(Tuple.Create(c[1], c[3]));
                         }
                     }
-                    entityList.Add(entity);
-                    entityListArrayForm.Add(entityArrayFormat);
+                    EntityList.Add(entity);
+                    EntityListArrayForm.Add(entityArrayFormat);
                     ents = [];
                 }
             }
@@ -175,8 +175,8 @@ namespace BSPPackStandalone
             string mapname = bsp.Name.Split('\\').Last().Split('.')[0];
 
             TextureList = [];
-            bsp.Seek(offsets[43].Key, SeekOrigin.Begin);
-            TextureList = new List<string>(Encoding.ASCII.GetString(reader.ReadBytes(offsets[43].Value)).Split('\0'));
+            bsp.Seek(Offsets[43].Key, SeekOrigin.Begin);
+            TextureList = new List<string>(Encoding.ASCII.GetString(reader.ReadBytes(Offsets[43].Value)).Split('\0'));
             for (int i = 0; i < TextureList.Count; i++)
             {
                 if (TextureList[i].StartsWith("/")) // materials in root level material directory start with /
@@ -196,7 +196,7 @@ namespace BSPPackStandalone
             }
 
             // find skybox materials
-            Dictionary<string, string> worldspawn = entityList.FirstOrDefault(item => item["classname"] == "worldspawn", []);
+            Dictionary<string, string> worldspawn = EntityList.FirstOrDefault(item => item["classname"] == "worldspawn", []);
             if (worldspawn.ContainsKey("skyname"))
                 foreach (string s in new string[] { "", "bk", "dn", "ft", "lf", "rt", "up" })
                 {
@@ -219,7 +219,7 @@ namespace BSPPackStandalone
             List<string> materials = [];
             HashSet<string> skybox_swappers = [];
 
-            foreach (Dictionary<string, string> ent in entityList)
+            foreach (Dictionary<string, string> ent in EntityList)
             {
                 foreach (KeyValuePair<string, string> prop in ent)
                 {
@@ -308,7 +308,7 @@ namespace BSPPackStandalone
 
             // pack I/O referenced materials
             // need to use array form of entity because multiple outputs with same command can't be stored in dict
-            foreach (var ent in entityListArrayForm)
+            foreach (var ent in EntityListArrayForm)
             {
                 foreach (var prop in ent)
                 {
@@ -375,7 +375,7 @@ namespace BSPPackStandalone
             ModelList = [];
             // getting information on the gamelump
             int propStaticId = 0;
-            bsp.Seek(offsets[35].Key, SeekOrigin.Begin);
+            bsp.Seek(Offsets[35].Key, SeekOrigin.Begin);
             KeyValuePair<int, int>[] GameLumpOffsets = new KeyValuePair<int, int>[reader.ReadInt32()]; // offset/length
             for (int i = 0; i < GameLumpOffsets.Length; i++)
             {
@@ -401,7 +401,7 @@ namespace BSPPackStandalone
             int leafCount = reader.ReadInt32();
 
             // bsp v25 uses ints instead of shorts for leaf lump
-            if (this.bspVersion == 25)
+            if (this.BspVersion == 25)
                 bsp.Seek(leafCount * sizeof(int), SeekOrigin.Current);
             else
                 bsp.Seek(leafCount * sizeof(short), SeekOrigin.Current);
@@ -418,10 +418,10 @@ namespace BSPPackStandalone
             int byteLength = GameLumpOffsets[propStaticId].Key + GameLumpOffsets[propStaticId].Value - (int)propOffset;
             int propLength = byteLength / propCount;
 
-            modelSkinList = new List<int>[modelCount]; // stores the ids of used skins
+            ModelSkinList = new List<int>[modelCount]; // stores the ids of used skins
 
             for (int i = 0; i < modelCount; i++)
-                modelSkinList[i] = [];
+                ModelSkinList[i] = [];
 
             for (int i = 0; i < propCount; i++)
             {
@@ -430,8 +430,8 @@ namespace BSPPackStandalone
                 bsp.Seek(6, SeekOrigin.Current);
                 int skin = reader.ReadInt32();
 
-                if (modelSkinList[modelId].IndexOf(skin) == -1)
-                    modelSkinList[modelId].Add(skin);
+                if (ModelSkinList[modelId].IndexOf(skin) == -1)
+                    ModelSkinList[modelId].Add(skin);
             }
 
         }
@@ -441,7 +441,7 @@ namespace BSPPackStandalone
             // builds the list of models referenced in entities
 
             EntModelList = [];
-            foreach (Dictionary<string, string> ent in entityList)
+            foreach (Dictionary<string, string> ent in EntityList)
             {
                 foreach (KeyValuePair<string, string> prop in ent)
                 {
@@ -469,7 +469,7 @@ namespace BSPPackStandalone
 
             // pack I/O referenced models
             // need to use array form of entity because multiple outputs with same command can't be stored in dict
-            foreach (var ent in entityListArrayForm)
+            foreach (var ent in EntityListArrayForm)
             {
                 foreach (var prop in ent)
                 {
@@ -489,7 +489,7 @@ namespace BSPPackStandalone
         {
             // builds the list of sounds referenced in entities
             EntSoundList = [];
-            foreach (Dictionary<string, string> ent in entityList)
+            foreach (Dictionary<string, string> ent in EntityList)
                 foreach (KeyValuePair<string, string> prop in ent)
                 {
                     if (Keys.vmfSoundKeys.Contains(prop.Key.ToLower()))
@@ -498,7 +498,7 @@ namespace BSPPackStandalone
 
             // pack I/O referenced sounds
             // need to use array form of entity because multiple outputs with same command can't be stored in dict
-            foreach (var ent in entityListArrayForm)
+            foreach (var ent in EntityListArrayForm)
             {
                 foreach (var prop in ent)
                 {
@@ -533,13 +533,13 @@ namespace BSPPackStandalone
             MiscList = [];
 
             // find color correction files
-            foreach (Dictionary<string, string> cc in entityList.Where(item => item["classname"].StartsWith("color_correction")))
+            foreach (Dictionary<string, string> cc in EntityList.Where(item => item["classname"].StartsWith("color_correction")))
                 if (cc.ContainsKey("filename"))
                     MiscList.Add(cc["filename"]);
 
             // pack I/O referenced TF2 upgrade files
             // need to use array form of entity because multiple outputs with same command can't be stored in dict
-            foreach (var ent in entityListArrayForm)
+            foreach (var ent in EntityListArrayForm)
             {
                 foreach (var prop in ent)
                 {
@@ -559,7 +559,7 @@ namespace BSPPackStandalone
         public void buildParticleList()
         {
             ParticleList = [];
-            foreach (Dictionary<string, string> ent in entityList)
+            foreach (Dictionary<string, string> ent in EntityList)
                 foreach (KeyValuePair<string, string> particle in ent)
                     if (particle.Key.ToLower() == "effect_name")
                         ParticleList.Add(particle.Value);
@@ -577,9 +577,7 @@ namespace BSPPackStandalone
             var io = property.Split("\u001b");
             if (io.Length != 5)
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"Failed to decode IO, ignoring: {property}");
-                Console.ResetColor();
+                Message.Warning($"WARNING: Failed to decode IO, ignoring: {property}");
                 return null;
             }
 
@@ -595,9 +593,7 @@ namespace BSPPackStandalone
                     var splitIo = parameter.Split(':');
                     if (splitIo.Length < 3)
                     {
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"Failed to decode AddOutput, format may be incorrect: {property}");
-                        Console.ResetColor();
+                        Message.Warning($"WARNING: Failed to decode AddOutput, format may be incorrect: {property}");
                         return null;
                     }
 
