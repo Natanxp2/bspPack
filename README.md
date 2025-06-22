@@ -1,14 +1,12 @@
 # bspPack
-Standalone packing tool stripped out of  [CompilePal](https://github.com/ruarai/CompilePal)
 
+Standalone cross-platform packing tool stripped out of [CompilePal](https://github.com/ruarai/CompilePal)
 
 ## Usage
-Paths to **game folder** ( folder of gameinfo.txt ) and to **steam installation folder** are stored in **config.ini** ( created on first use ).<br>
-There is no automatic detection so they need to be provided manually.<br>
+
+Paths to **game folder** ( folder of gameinfo.txt ) and to **steam installation folder** are stored in **config.ini** which is created on first use.<br>
 Running `bspPack --modify` creates `ResourceConfig.ini` which is used instead of multiple other flags in CompilePal.<br>
 If compressed BSP is provided automatic decompression is attempted by running bspzip with -repack flag.
-
-
 
 ## Flags
 
@@ -21,15 +19,17 @@ If compressed BSP is provided automatic decompression is attempted by running bs
 **`-M | --modify`** - Modifies PakFile based on ResourceConfig.ini[^1]<br>
 **`-U | --unpack`** - Unpacks the BSP to **\<filename\>\_unpacked**<br>
 **`-S | --search`** - Searches **\/maps** folder of the game directory for the BSP file<br>
-**`-L | --lowercase`** - Lowercases all directories, files, and content of .vmt files in /materials directory<br>
+**`-L | --lowercase`** - Lowercases all directories, files, and content of .vmt files in **\/materials** directory<br>
 
 [^1]: Replaces --include, --includefilelist, --includeDir, --includesourcedirectories, --exclude, --excludeDir, and --excludeVpk flags from CompilePal
 
 ## Missing functionality
+
 Support for renaming conflicting particle names<br>
 Packing VPK<br>
 
 ## Linux problem
+
 For reasons I have not quite figured out yet some texture paths are stored in upper case in BSPs. <br>
 This does not seem to be a problem with how CompilePal manages files but just the way BSPs store paths.<br>
 Because linux paths are case sensitive all paths are normalized to lower case, meaning all textures that are supposed to be packed need to be in lower case.<br>
