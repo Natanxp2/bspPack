@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
 	<Version>0.3.2</Version>
 	<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
 	<PublishSingleFile>true</PublishSingleFile>
@@ -10,15 +10,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-  
-  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
-    <OutputPath>bin/Windows</OutputPath>
-    <PublishDir>publish/win-x64</PublishDir>
-  </PropertyGroup>
 
-  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
-    <OutputPath>bin/Linux</OutputPath>
-    <PublishDir>publish/linux-x64</PublishDir>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
   </PropertyGroup>
   
   <ItemGroup>
@@ -29,7 +23,7 @@
   
   <ItemGroup>
     <PackageReference Include="Glob" Version="1.1.9" />
-    <PackageReference Include="ValveKeyValue" Version="0.11.0.378" />
+    <PackageReference Include="ValveKeyValue" Version="0.13.1.398" />
   </ItemGroup>
-  
+
 </Project>
