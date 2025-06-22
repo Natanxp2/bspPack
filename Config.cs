@@ -1,12 +1,13 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using Microsoft.Win32;
 
 namespace BSPPackStandalone
 {
 	public static class Config
 	{
-		public static string ExeDirectory = AppContext.BaseDirectory;
+		public static readonly string ExeDirectory = AppContext.BaseDirectory;
 		public static string BSPFile { get; set; } = null!;
 		public static string GameFolder { get; set; } = null!;
 		public static string SteamAppsPath { get; set; } = null!;
@@ -133,18 +134,122 @@ namespace BSPPackStandalone
 
 		private static void CreateDefaultConfigFile(string filePath)
 		{
+			string steamPath = DetectSteamPath();
+			var gamePaths = DetectGamePaths(steamPath);
+			string chosenGame = string.Empty;
+
+			Message.Info("config.ini not found, creating...");
+
+			if (string.IsNullOrEmpty(steamPath))
+				Message.Warning("Path to steam not found, please provide it manually in config.ini");
+			Message.Write("Path to steam found at: ");
+			Message.Write(steamPath + "\n", ConsoleColor.Blue);
+
+			if (gamePaths.Count > 0)
+			{
+				Message.WriteLine("Following games were found:");
+				for (int i = 0; i < gamePaths.Count; i++)
+				{
+					Message.Write($"[{i + 1}] ");
+					Message.WriteLine($"{gamePaths[i].Item1} ", ConsoleColor.Blue);
+				}
+				Message.Write("\nChoose which one to use a the base: ");
+
+				int selected = -1;
+				while (selected < 1 || selected > gamePaths.Count)
+				{
+					string? input = Console.ReadLine();
+					if (!int.TryParse(input, out selected) || selected < 1 || selected > gamePaths.Count)
+					{
+						Message.Write("Invalid selection. Please enter a valid number: ", ConsoleColor.Yellow);
+					}
+				}
+				chosenGame = Path.Combine(steamPath, "steamapps", "common", gamePaths[selected - 1].Item1, gamePaths[selected - 1].Item2);
+			}
+			else
+			{
+				Message.Warning("No supported games found. Please provide the game folder manually in config.ini.");
+			}
+
 			var lines = new List<string>
 			{
 				"[GameFolder]",
 				"#Specify the path to the game folder here ( directory of gameinfo.txt )",
-				"",
+				chosenGame,
 				"[SteamPath]",
 				"#Specify the path to the Steam folder here ( steam installation directory )",
-				""
+				steamPath
 			};
+
 			File.WriteAllLines(filePath, lines);
-			Console.WriteLine($"Default configuration file created at {filePath}. Please provide paths to game and steam folders.");
-			Environment.Exit(1);
+			Message.Write($"Default configuration file created at: ");
+			Message.Write(filePath + "\n", ConsoleColor.Blue);
+		}
+
+		private static string DetectSteamPath()
+		{
+			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			{
+				try
+				{
+					using var key = Registry.CurrentUser.OpenSubKey(@"Software\Valve\Steam");
+					var regPath = key?.GetValue("SteamPath") as string;
+					if (!string.IsNullOrEmpty(regPath) && Directory.Exists(regPath))
+						return regPath;
+				}
+				catch
+				{
+					return string.Empty;
+				}
+			}
+			else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+			{
+				var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+				var possiblePaths = new[]
+				{
+					Path.Combine(home, ".steam", "steam"),
+					Path.Combine(home, ".local", "share", "Steam")
+				};
+
+				foreach (string path in possiblePaths)
+				{
+					if (Directory.Exists(path))
+						return path;
+				}
+			}
+			return string.Empty;
+		}
+
+		private static List<(string, string)> DetectGamePaths(string steamPath)
+		{
+			var games = new (string Name, string subDir)[]
+			{
+				("Team Fortress 2", "tf"),
+				("Counter-Strike Source", "cstrike"),
+				("Counter-Strike Global Offensive", "csgo"),
+				("Portal", "portal"),
+				("Portal 2", "portal2"),
+				("Momentum Mod", "momentum"),
+				("Momentum Mod Playtest", "momentum"),
+			};
+
+			List<(string, string)> found = [];
+			string common = Path.Combine(steamPath, "steamapps", "common");
+
+			if (!Directory.Exists(common))
+				return [];
+
+			foreach (var (name, subdir) in games)
+			{
+				string gameRoot = Path.Combine(common, name);
+				if (!Directory.Exists(gameRoot))
+					continue;
+
+				string gameInfoPath = Path.Combine(gameRoot, subdir);
+				found.Add((name, gameInfoPath));
+			}
+
+			return found;
 		}
 	}
 }

@@ -368,6 +368,8 @@ Please provide path to BSP.
 					Message.Error($"BSPZIP exited with code: {p.ExitCode}, this might indicate that too many files are being packed\n");
 				else
 					Message.Error($"BSPZIP exited with code: {p.ExitCode}\n");
+
+				Environment.Exit(p.ExitCode);
 			}
 
 		}
@@ -419,6 +421,8 @@ Please provide path to BSP.
 					Message.Error($"BSPZIP exited with code: {p.ExitCode}, this might indicate that too many files are being packed");
 				else
 					Message.Error($"BSPZIP exited with code: {p.ExitCode}");
+
+				Environment.Exit(p.ExitCode);
 			}
 		}
 
