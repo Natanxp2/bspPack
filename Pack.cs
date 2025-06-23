@@ -371,7 +371,6 @@ Please provide path to BSP.
 
 				Environment.Exit(p.ExitCode);
 			}
-
 		}
 
 		static void CompressBSP(bool decompress = false)
@@ -443,13 +442,26 @@ Please provide path to BSP.
 				Environment.Exit(0);
 			}
 
-			ProcessDirectories(materialsPath);
+			int skippedCount = 0;
+			try
+			{
+				ProcessDirectories(materialsPath, ref skippedCount);
+				if (skippedCount == 0)
+					Message.Success("Files and Directories successfully lowercased!");
+				else
+					Message.Warning("\nFiles and/or directories were skipped during lowercasing. Some files might not pack correctly");
+			}
+			catch (Exception e)
+			{
+				Message.Error($"An error occurred during lowercasing: {e.Message}");
+				Message.Error("Operation aborted. Please check your files and try again.");
+			}
 
-			static void ProcessDirectories(string path)
+			static void ProcessDirectories(string path, ref int skippedCount)
 			{
 				foreach (var dir in Directory.GetDirectories(path))
 				{
-					ProcessDirectories(dir);
+					ProcessDirectories(dir, ref skippedCount);
 				}
 
 				foreach (var filePath in Directory.GetFiles(path))
@@ -475,6 +487,11 @@ Please provide path to BSP.
 						string newFilePath = Path.Combine(Path.GetDirectoryName(filePath)!, lowerFileName);
 						if (!File.Exists(newFilePath))
 							File.Move(filePath, newFilePath);
+						else
+						{
+							Message.Warning($"WARNING: Skipped renaming:\n{filePath}\nLowercased file already exists");
+							skippedCount++;
+						}
 					}
 				}
 
@@ -487,11 +504,14 @@ Please provide path to BSP.
 					string newDirPath = Path.Combine(parentDir, lowerDirName);
 					if (!Directory.Exists(newDirPath))
 						Directory.Move(path, newDirPath);
+					else
+					{
+						Message.Warning($"WARNING: Skipped renaming directory {path}\nLowercased directory already exists");
+						skippedCount++;
+					}
 				}
 
 			}
-
-			Message.Success("Files and Directories successfully lowercased!");
 		}
 	}
 }
