@@ -111,7 +111,7 @@ Please provide path to BSP.
 			{
 				unpackDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Path.GetFileNameWithoutExtension(bsp.File.FullName) + "_unpacked");
 				AssetUtils.UnpackBSP(unpackDir);
-				Console.WriteLine($"BSP unpacked to: {unpackDir}");
+				Message.Success($"BSP unpacked to: {unpackDir}");
 				return;
 			}
 
