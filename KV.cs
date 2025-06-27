@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+﻿using System.Text;
 
 namespace BSPPackStandalone.KV
 {
-    public static class StringUtil {
+    public static class StringUtil
+    {
         /// <summary>
         /// Cleans up an improperly formatted KV string
         /// </summary>
@@ -32,7 +27,7 @@ namespace BSPPackStandalone.KV
 
                     startIndex = i + 1;
                     lineQuoteCount = 0;
-                } 
+                }
                 else if (c == '}')
                 {
                     if (i > startIndex)
@@ -41,7 +36,7 @@ namespace BSPPackStandalone.KV
                         if (beforeCloseBraceText != "")
                             formatted.AppendLine(beforeCloseBraceText);
                     }
-                    
+
                     formatted.AppendLine("}");
 
                     startIndex = i + 1;

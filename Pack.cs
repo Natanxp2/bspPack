@@ -1,17 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Configuration;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
 using GlobExpressions;
-using BSPPackStandalone.KV;
 using BSPPackStandalone.UtilityProcesses;
 using ValveKeyValue;
-using System.Runtime.CompilerServices;
 
 namespace BSPPackStandalone
 {
