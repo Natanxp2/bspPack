@@ -40,7 +40,7 @@ public static class Config
 	{
 		if (File.Exists(filePath))
 		{
-			Console.WriteLine("ResourceConfig.ini already exists.");
+			Message.Error("ResourceConfig.ini already exists.");
 			return;
 		}
 
@@ -66,11 +66,11 @@ public static class Config
 		try
 		{
 			File.WriteAllLines(filePath, lines);
-			Console.WriteLine($"Default ResourceConfig.ini file has been created.");
+			Message.Success($"Default ResourceConfig.ini file has been created.");
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"Error creating configuration file: {ex.Message}");
+			Message.Error($"Error creating configuration file: {ex.Message}");
 		}
 	}
 
