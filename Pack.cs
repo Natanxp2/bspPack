@@ -144,6 +144,12 @@ Please provide path to BSP.
 			if (includeDirs.Count != 0)
 				GetFilesFromIncludedDirs();
 
+			if (particlemanifest)
+			{
+				ParticleManifest manifest = new(sourceDirectories, excludeDirs, excludeFiles, bsp, Config.BSPFile, Config.GameFolder);
+				bsp.ParticleManifest = manifest.particleManifest;
+			}
+
 			Console.WriteLine("\nInitializing pak file...");
 			PakFile pakfile = new(bsp, sourceDirectories, includeFiles, excludeFiles, excludeDirs, excludeVpkFiles, outputFile, noswvtx);
 
@@ -176,11 +182,7 @@ Please provide path to BSP.
 				return;
 			}
 
-			if (particlemanifest)
-			{
-				ParticleManifest manifest = new(sourceDirectories, excludeDirs, excludeFiles, bsp, Config.BSPFile, Config.GameFolder);
-				bsp.ParticleManifest = manifest.particleManifest;
-			}
+
 
 			Console.WriteLine("Running bspzip...");
 			PackBSP(outputFile);
@@ -190,6 +192,9 @@ Please provide path to BSP.
 				Console.WriteLine("Compressing BSP...");
 				CompressBSP();
 			}
+
+			if (particlemanifest)
+				File.Delete(Config.BSPFile[..^4] + "_particles.txt");
 
 			Directory.Delete(Config.TempFolder, true);
 			Message.Success("Finished!");
@@ -225,7 +230,7 @@ Please provide path to BSP.
 			if (!File.Exists(filePath))
 			{
 				Message.Error($"{filePath} not found, run 'bspPack --modify' to create it");
-				System.Environment.Exit(1);
+				Environment.Exit(1);
 			}
 
 			string currentSection = "";
@@ -239,7 +244,7 @@ Please provide path to BSP.
 					currentSection = line.Trim('[', ']');
 					continue;
 				}
-				var trimmedLine = line.Trim().Trim('"');
+				var trimmedLine = line.Trim().Trim('"').TrimEnd('/', '\\');
 				switch (currentSection)
 				{
 					case "IncludeFiles":

@@ -47,7 +47,7 @@ namespace BSPPackStandalone.UtilityProcesses
                 {
                     // Alien Swarm does not prepend materials/ to particles, add it just in case
                     if (this.BinaryVersion == 5 && this.PcfVersion == 2)
-                        materialNames.Add("materials\\" + s);
+                        materialNames.Add("materials/" + s);
 
                     materialNames.Add(s);
                 }
@@ -70,7 +70,7 @@ namespace BSPPackStandalone.UtilityProcesses
             }
             catch (FileNotFoundException)
             {
-                Console.WriteLine($"Could not find {filePath}\n");
+                Message.Warning($"WARNING: Could not find {filePath}\n");
                 return null;
             }
 
@@ -173,7 +173,7 @@ namespace BSPPackStandalone.UtilityProcesses
             }
             catch (FileNotFoundException)
             {
-                Console.WriteLine($"Could not find {filePath}\n");
+                Message.Warning($"WARNING: Could not find {filePath}\n");
                 return null;
             }
 
@@ -277,7 +277,7 @@ namespace BSPPackStandalone.UtilityProcesses
                     int count = (attributeType > 14) ? reader.ReadInt32() : 1;
                     attributeType = (attributeType > 14) ? attributeType - 14 : attributeType;
 
-                    int[] typelength = { 0, 4, 4, 4, 1, 1, 4, 4, 4, 8, 12, 16, 12, 16, 64 };
+                    int[] typelength = [0, 4, 4, 4, 1, 1, 4, 4, 4, 8, 12, 16, 12, 16, 64];
 
                     switch (attributeType)
                     {
@@ -329,9 +329,9 @@ namespace BSPPackStandalone.UtilityProcesses
     {
         //Class responsible for holding information about particles
         private List<PCF> particles = [];
-        private string internalPath = "particles\\";
-        private string filepath = String.Empty;
-        private string baseDirectory;
+        private readonly string internalPath = "particles";
+        private readonly string filepath = String.Empty;
+        private readonly string baseDirectory;
 
         public KeyValuePair<string, string> particleManifest { get; private set; }
 
@@ -339,37 +339,47 @@ namespace BSPPackStandalone.UtilityProcesses
         {
             Console.WriteLine($"\nGenerating Particle Manifest...");
 
-            baseDirectory = gameFolder + "\\";
+            baseDirectory = gameFolder + "/";
 
             particles = [];
 
+            //Add /particles to all source directories
+            //Remove those that don't exist
+            //Add any directories that may be withing remaining ones recursively
+            List<string> particleDirectories = [.. sourceDirectories
+                                                    .Select(s => Path.Combine(s, internalPath))
+                                                    .Where(Directory.Exists)
+                                                    .SelectMany(path =>
+                                                        new[] { path }
+                                                        .Concat(Directory.GetDirectories(path, "*", SearchOption.AllDirectories))
+                                                    )
+                                                ];
+
             //Search directories for pcf and find particles that match used particle names
             //TODO multithread this?
-            foreach (string sourceDirectory in sourceDirectories)
+            foreach (string dir in particleDirectories)
             {
-                string externalPath = sourceDirectory + "\\" + internalPath;
+                if (ignoreDirectories.Contains(dir))
+                    continue;
 
-                if (Directory.Exists(externalPath) && !ignoreDirectories.Contains(externalPath.Remove(externalPath.Length - 1, 1), StringComparer.OrdinalIgnoreCase))
-                    foreach (string file in Directory.GetFiles(externalPath))
+                foreach (string file in Directory.GetFiles(dir))
+                {
+                    if (file.EndsWith(".pcf") && !excludedFiles.Contains(file.ToLower()))
                     {
-                        if (file.EndsWith(".pcf") && !excludedFiles.Contains(file.ToLower()))
-                        {
-                            PCF? pcf = ParticleUtils.IsTargetParticle(file, map.ParticleList);
-                            if (pcf != null && !particles.Exists(p => p.FilePath == pcf.FilePath))
-                                particles.Add(pcf);
-                        }
+                        PCF? pcf = ParticleUtils.IsTargetParticle(file, map.ParticleList);
+                        if (pcf != null && !particles.Exists(p => p.FilePath == pcf.FilePath))
+                            particles.Add(pcf);
                     }
+                }
             }
 
             if (particles == null || particles.Count == 0)
             {
-                Console.WriteLine("Could not find any PCFs that contained used particles!\n");
+                Message.Warning("WARNING: Could not find any PCFs that contained used particles!\n");
                 return;
             }
 
-
             //Check for pcfs that contain the same particle name
-            //List<ParticleConflict> conflictingParticles = new List<ParticleConflict>();
             List<PCF> conflictingParticles = [];
             if (particles.Count > 1)
             {
@@ -377,13 +387,11 @@ namespace BSPPackStandalone.UtilityProcesses
                 {
                     for (int j = i + 1; j < particles.Count; j++)
                     {
-
                         //Create a list of names that intersect between the 2 lists
-                        List<string> conflictingNames = particles[i].ParticleNames.Intersect(particles[j].ParticleNames).ToList();
+                        List<string> conflictingNames = [.. particles[i].ParticleNames.Intersect(particles[j].ParticleNames)];
 
                         if (conflictingNames.Count != 0 && particles[i].FilePath != particles[j].FilePath)
                         {
-                            //pc.conflictingNames = conflictingNames;
                             conflictingParticles.Add(particles[i]);
                             conflictingParticles.Add(particles[j]);
                         }
@@ -395,48 +403,37 @@ namespace BSPPackStandalone.UtilityProcesses
             //Solve conflicts
             if (conflictingParticles.Count != 0)
             {
-                Console.WriteLine("Conflicting particles exist. Resolve conflicts and try again");
-                System.Environment.Exit(1);
-                /* THIS IS TO RESOLVE CONFLICTING PARTICLES, IMPLEMENT AT SOME POINT (I PROBABLY WON'T)
-				
+                string pairText = conflictingParticles.Count / 2 == 1 ? "pair" : "pairs";
+                Message.Warning($"\nFound {conflictingParticles.Count / 2} conflicting particle {pairText}:");
                 //Remove particle if it is in a particle conflict, add back when conflict is manually resolved
                 foreach (PCF conflictParticle in conflictingParticles)
                 {
                     particles.Remove(conflictParticle);
                 }
-                
-                List<PCF> resolvedConflicts = new List<PCF>();
 
-                //Bring up conflict window
-                //Have to run on STAthread
-                Application.Current.Dispatcher.Invoke((Action)delegate
+                List<PCF> resolvedConflicts = [];
+
+                for (int i = 0; i < conflictingParticles.Count; i += 2)
                 {
-                    //Make taskbar icon red
-                    ProgressManager.ErrorProgress();
+                    resolvedConflicts.Add(ResolveConflicts(conflictingParticles[i], conflictingParticles[i + 1], i / 2));
+                }
 
-                    //Create window
-                    ConflictWindow cw = new ConflictWindow(conflictingParticles, map.ParticleList);
-                    cw.ShowDialog();
-
-                    //Get resolved conflicts
-                    resolvedConflicts = cw.selectedPCFS;
-                });
 
                 //Add resolved conflicts back into particle list
                 particles.AddRange(resolvedConflicts);
-				
-				*/
+
+
             }
 
             //Remove duplicates
-            particles = particles.Distinct().ToList();
+            particles = [.. particles.Distinct()];
 
             //Dont create particle manifest if there is no particles
             if (particles.Count == 0)
                 return;
 
             //Generate manifest file
-            filepath = bspPath.Remove(bspPath.Length - 4, 4) + "_particles.txt";
+            filepath = bspPath[..^4] + "_particles.txt";
 
             //Write manifest
             using (StreamWriter sw = new(filepath))
@@ -448,10 +445,10 @@ namespace BSPPackStandalone.UtilityProcesses
                 {
                     foreach (PCF particle in particles)
                     {
-                        if (particle.FilePath.StartsWith(source + "\\" + internalPath))
+                        if (particle.FilePath.StartsWith(source + "/" + internalPath))
                         {
                             // add 1 for the backslash between source dir and particle path
-                            string internalParticlePath = particle.FilePath.Remove(0, source.Length + 1);
+                            string internalParticlePath = particle.FilePath[(source.Length + 1)..];
 
                             sw.WriteLine($"      \"file\"    \"!{internalParticlePath}\"");
                             Console.WriteLine($"PCF added to manifest: {internalParticlePath}");
@@ -463,12 +460,39 @@ namespace BSPPackStandalone.UtilityProcesses
             }
 
             string internalDirectory = filepath;
-            if (filepath.ToLower().StartsWith(baseDirectory.ToLower()))
+            if (filepath.StartsWith(baseDirectory, StringComparison.CurrentCultureIgnoreCase))
             {
                 internalDirectory = filepath.Substring(baseDirectory.Length);
             }
             //Store internal/external dir so it can be packed
             particleManifest = new KeyValuePair<string, string>(internalDirectory, filepath);
+
+            static PCF ResolveConflicts(PCF p1, PCF p2, int num)
+            {
+                if (num == 0)
+                    num = 1;
+                Message.Warning($"\nConflict {num}:");
+                Message.Write("[1]: ", ConsoleColor.Yellow);
+                Message.Warning(p1.FilePath);
+                Message.Write("[2]: ", ConsoleColor.Yellow);
+                Message.Warning(p2.FilePath);
+                Message.Write("\nChoose which particle to use: ", ConsoleColor.Yellow);
+                int selected = -1;
+
+                while (selected < 1 || selected > 2)
+                {
+                    string? input = Console.ReadLine();
+                    if (!int.TryParse(input, out selected) || selected < 1 || selected > 2)
+                    {
+                        Message.Write("Invalid selection. Please enter a valid number: ", ConsoleColor.Yellow);
+                    }
+                }
+
+                if (selected == 1)
+                    return p1;
+                else
+                    return p2;
+            }
         }
     }
 }

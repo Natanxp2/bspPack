@@ -361,7 +361,7 @@ namespace BSPPackStandalone
             string externalPath = FindExternalFile(internalPath);
             if (externalPath == String.Empty)
             {
-                Message.Warning($"WARNING: Failed to find particle manifest file {internalPath}");
+                Message.Warning($"WARNING: Failed to find particle manifest file {externalPath}");
                 return;
             }
 
@@ -377,7 +377,7 @@ namespace BSPPackStandalone
             }
             else
             {
-                Message.Warning($"WARNING: Failed to find particle manifest file {internalPath}");
+                Message.Warning($"WARNING: Failed to find particle manifest file {externalPath}");
                 return;
             }
         }
