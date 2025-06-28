@@ -19,19 +19,18 @@ If compressed BSP is provided automatic decompression is attempted by running bs
 **`-M | --modify`** - Modifies PakFile based on ResourceConfig.ini[^1]<br>
 **`-U | --unpack`** - Unpacks the BSP to **\<filename\>\_unpacked**<br>
 **`-S | --search`** - Searches **\/maps** folder of the game directory for the BSP file<br>
-**`-L | --lowercase`** - Lowercases all directories, files, and content of .vmt files in **\/materials** directory<br>
+**`-L | --lowercase`** - Lowercases relevant files and directories[^2]<br>
 
 [^1]: Replaces --include, --includefilelist, --includeDir, --includesourcedirectories, --exclude, --excludeDir, and --excludeVpk flags from CompilePal
+[^2]: Lowercases all files and directories in **/materials** and **/models** as well as content of .vmt files
 
 ## Missing functionality
 
-Support for renaming conflicting particle names<br>
 Packing VPK<br>
 
 ## Linux problem
 
-For reasons I have not quite figured out yet some texture paths are stored in upper case in BSPs. <br>
-This does not seem to be a problem with how CompilePal manages files but just the way BSPs store paths.<br>
-Because linux paths are case sensitive all paths are normalized to lower case, meaning all textures that are supposed to be packed need to be in lower case.<br>
-Until there is a way to deal with upper case in BSPs you can use --lowercase (-L) flag to automatically lowercase all directories, files, and content of .vmt files inside of /materials folder.<br>
-Please use with caution!
+BSPs store some paths in uppercase. <br>
+Because linux paths are case sensitive all paths are normalized to lower case, meaning all textures and models that are supposed to be packed need to be in lower case.<br>
+Until there is a way to deal with that you can use --lowercase (-L) flag to automatically lowercase all relevant files and directories<br>
+Please use with caution and create backups!
