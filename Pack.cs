@@ -65,7 +65,7 @@ Please provide path to BSP.
 			return;
 		}
 		if (lowercase)
-			LowercaseMaterials();
+			LowercaseAssets();
 
 		if (search)
 			Config.BSPFile = Path.Combine(Config.GameFolder, "maps", args[^1]);
@@ -419,36 +419,41 @@ Please provide path to BSP.
 		}
 	}
 
-	static void LowercaseMaterials()
+	static void LowercaseAssets()
 	{
-		string materialsPath = Path.Join(Config.GameFolder, "materials");
+		List<string> assetsPaths = [];
+		assetsPaths.Add(Path.Join(Config.GameFolder, "materials"));
+		assetsPaths.Add(Path.Join(Config.GameFolder, "models"));
 
-		if (!Directory.Exists(materialsPath))
-			Message.Error($"Directory doesn't exist: {materialsPath}, lowercasing cancelled");
-
-		Message.Warning($"You are trying to lowercase all directories, files, and content of .vmt files in:\n{materialsPath}");
-		Message.Warning("Please make sure you have a backup in case something goes wrong!");
-		string? input = Message.Prompt("Do you want to continue? [y/N]: ", ConsoleColor.Yellow);
-
-		if (string.IsNullOrWhiteSpace(input) || !input.Trim().StartsWith("y", StringComparison.CurrentCultureIgnoreCase))
+		foreach (string path in assetsPaths)
 		{
-			Message.Error("Lowercasing Cancelled, exiting");
-			Environment.Exit(0);
-		}
+			if (!Directory.Exists(path))
+				Message.Error($"Directory doesn't exist: {path}, lowercasing cancelled");
 
-		int skippedCount = 0;
-		try
-		{
-			ProcessDirectories(materialsPath, ref skippedCount);
-			if (skippedCount == 0)
-				Message.Success("Files and Directories successfully lowercased!");
-			else
-				Message.Warning("\nFiles and/or directories were skipped during lowercasing. Some files might not pack correctly");
-		}
-		catch (Exception e)
-		{
-			Message.Error($"An error occurred during lowercasing: {e.Message}");
-			Message.Error("Operation aborted. Please check your files and try again.");
+			Message.Warning($"\nYou are trying to lowercase all files and directories in:\n{path}");
+			Message.Warning("Please make sure you have a backup in case something goes wrong!");
+			string? input = Message.Prompt("Do you want to continue? [y/N]: ", ConsoleColor.Yellow);
+
+			if (string.IsNullOrWhiteSpace(input) || !input.Trim().StartsWith("y", StringComparison.CurrentCultureIgnoreCase))
+			{
+				Message.Error("Lowercasing Cancelled, exiting");
+				Environment.Exit(0);
+			}
+
+			int skippedCount = 0;
+			try
+			{
+				ProcessDirectories(path, ref skippedCount);
+				if (skippedCount == 0)
+					Message.Success("Files and Directories successfully lowercased!\n");
+				else
+					Message.Warning("\nFiles and/or directories were skipped during lowercasing. Some files might not pack correctly");
+			}
+			catch (Exception e)
+			{
+				Message.Error($"An error occurred during lowercasing: {e.Message}");
+				Message.Error("Operation aborted. Please check your files and try again.");
+			}
 		}
 
 		static void ProcessDirectories(string path, ref int skippedCount)
