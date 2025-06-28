@@ -1,21 +1,18 @@
 using System.Diagnostics;
 using GlobExpressions;
-using ValveKeyValue;
 
 namespace bspPack;
 
 class BSPPack
 {
-	private static KVSerializer KVSerializer = KVSerializer.Create(KVSerializationFormat.KeyValues1Text);
-
 	private static List<string> sourceDirectories = [];
-	private static List<string> includeFiles = [];
-	private static List<string> includeFileLists = [];
-	private static List<string> includeDirs = [];
-	private static List<string> includeSourceDirectories = [];
-	private static List<string> excludeFiles = [];
-	private static List<string> excludeDirs = [];
-	private static List<string> excludeVpkFiles = [];
+	private static readonly List<string> includeFiles = [];
+	private static readonly List<string> includeFileLists = [];
+	private static readonly List<string> includeDirs = [];
+	private static readonly List<string> includeSourceDirectories = [];
+	private static readonly List<string> excludeFiles = [];
+	private static readonly List<string> excludeDirs = [];
+	private static readonly List<string> excludeVpkFiles = [];
 
 	private static string outputFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BSPZipFiles/files.txt");
 
@@ -48,7 +45,7 @@ class BSPPack
 		if (args.Length == 0)
 		{
 			string helpMessage = @"
-Please provide path to BSP.
+Please provide a path to the BSP.
 ## Flags
 -V | --verbose            Outputs a complete listing of added assets
 -D | --dryrun             Creates a txt file for bspzip usage but does not pack
@@ -59,7 +56,7 @@ Please provide path to BSP.
 -M | --modify             Modifies PakFile based on ResourceConfig.ini
 -U | --unpack             Unpacks the BSP to <filename>_unpacked
 -S | --search             Searches /maps folder of the game directory for the BSP file
--L | --lowercase		  Lowercases directories, files, and content of .vmt files inside of /materials folder
+-L | --lowercase		  Lowercases content of /materials and /models directories
 ";
 			Console.WriteLine(helpMessage);
 			return;
@@ -143,7 +140,7 @@ Please provide path to BSP.
 		if (includeDirs.Count != 0)
 			GetFilesFromIncludedDirs();
 
-		if (particlemanifest)
+		if (particlemanifest && !dryrun)
 		{
 			ParticleManifest manifest = new(sourceDirectories, excludeDirs, excludeFiles, bsp, Config.BSPFile, Config.GameFolder);
 			bsp.ParticleManifest = manifest.particleManifest;
@@ -176,7 +173,7 @@ Please provide path to BSP.
 
 		if (dryrun)
 		{
-			Directory.Delete(Config.TempFolder, true);
+			DeleteTempFiles();
 			Message.Success($"Dry run finished! File saved to {outputFile}");
 			return;
 		}
@@ -192,10 +189,7 @@ Please provide path to BSP.
 			CompressBSP();
 		}
 
-		if (particlemanifest)
-			File.Delete(Config.BSPFile[..^4] + "_particles.txt");
-
-		Directory.Delete(Config.TempFolder, true);
+		DeleteTempFiles();
 		Message.Success("Finished!");
 	}
 
@@ -313,9 +307,7 @@ Please provide path to BSP.
 		{
 			var files = Directory.GetFiles(dir, "*", SearchOption.AllDirectories);
 			foreach (var file in files)
-			{
 				includeFiles.Add(file);
-			}
 		}
 	}
 
@@ -363,6 +355,7 @@ Please provide path to BSP.
 			else
 				Message.Error($"BSPZIP exited with code: {p.ExitCode}\n");
 
+			DeleteTempFiles();
 			Environment.Exit(p.ExitCode);
 		}
 	}
@@ -415,6 +408,7 @@ Please provide path to BSP.
 			else
 				Message.Error($"BSPZIP exited with code: {p.ExitCode}");
 
+			DeleteTempFiles();
 			Environment.Exit(p.ExitCode);
 		}
 	}
@@ -511,5 +505,13 @@ Please provide path to BSP.
 			}
 
 		}
+	}
+
+	static void DeleteTempFiles()
+	{
+		File.Delete(Config.BSPFile[..^4] + "_particles.txt");
+
+		if (Directory.Exists(Config.TempFolder))
+			Directory.Delete(Config.TempFolder, recursive: true);
 	}
 }
