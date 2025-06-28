@@ -87,8 +87,11 @@ static class AssetUtils
                 mdl.Seek(offset, SeekOrigin.Begin);
 
                 string model = ReadNullTerminatedString(mdl, reader);
-                model = model.TrimStart(new char[] { '/', '\\' });
-                model = model.Replace('\\', '/');
+
+                model = model.TrimStart(['/', '\\'])
+                                .Replace('\\', '/')
+                                .ToLower();
+
                 modelDirs.Add(model);
             }
 
