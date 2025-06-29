@@ -19,21 +19,26 @@ public static class Config
 	public static void InitializeConfig()
 	{
 		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+		{
 			BSPZip = Path.Combine(GameFolder, @"../bin/win64", "bspzip.exe");
+			VPK = Path.Combine(GameFolder, @"../bin/win64, vpk.exe");
+		}
 		else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+		{
 			BSPZip = Path.Combine(GameFolder, @"../bin/linux64", "bspzip");
+			VPK = Path.Combine(GameFolder, @"../bin/linux64, vpk");
+		}
 
-		KeysFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Keys");
+		KeysFolder = Path.Combine(ExeDirectory, "Keys");
 
 		if (!Directory.Exists(KeysFolder))
 		{
-			Message.Error($"Keys folder doesn't exist in {AppDomain.CurrentDomain.BaseDirectory}!");
+			Message.Error($"Keys folder doesn't exist in {ExeDirectory}!");
 			Environment.Exit(1);
 		}
 
-		TempFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Temp");
-		CopyLocation = Path.Combine(AppDomain.CurrentDomain.BaseDirectory); //Placeholder
-		VPK = Path.Combine(AppDomain.CurrentDomain.BaseDirectory); //Placeholder
+		TempFolder = Path.Combine(ExeDirectory, "Temp");
+		CopyLocation = Path.Combine(ExeDirectory); //Placeholder
 	}
 
 	public static void CreateDefaultResourceConfigFile(string filePath)
@@ -60,6 +65,8 @@ public static class Config
 				"[ExcludeDirs]",
 				"",
 				"[ExcludeVpkFiles]",
+				"",
+				"[AddonInfo]",
 				"",
 			};
 
