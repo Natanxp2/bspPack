@@ -156,7 +156,7 @@ partial class BSPPack
         if (p.ExitCode != 0)
         {
             // this indicates an access violation. BSPZIP may have crashed because of too many files being packed
-            // I'm gonna assume this is the same for vpk, no exit code check exists is not in compilePal for vpk;
+            // I'm gonna assume this is the same for vpk, no exit code check exists in compilePal for vpk;
             if (p.ExitCode == -1073741819)
                 Message.Error($"VPK tool exited with code: {p.ExitCode}, this might indicate that too many files are being packed");
 
@@ -217,5 +217,56 @@ partial class BSPPack
             return false;
         }
         return true;
+    }
+
+    static void UnpackVPK()
+    {
+        string arguments = Config.BSPFile;
+
+        var p = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = Config.VPK,
+                Arguments = arguments,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            }
+        };
+
+        try
+        {
+            p.Start();
+        }
+        catch (Exception e)
+        {
+            Message.Error(e.ToString());
+            Message.Error("Failed to run vpk packing tool");
+            Environment.Exit(1);
+        }
+
+        string output = p.StandardOutput.ReadToEnd();
+        string errOutput = p.StandardError.ReadToEnd();
+
+        if (verbose)
+        {
+            Console.WriteLine(output);
+            Console.WriteLine(errOutput);
+        }
+
+        p.WaitForExit();
+        if (p.ExitCode != 0)
+        {
+            // this indicates an access violation. BSPZIP may have crashed because of too many files being packed
+            // I'm gonna assume this is the same for vpk, no exit code check exists compilePal for vpk;
+            if (p.ExitCode == -1073741819)
+                Message.Error($"VPK tool exited with code: {p.ExitCode}, this might indicate that too many files are being packed");
+            else
+                Message.Error($"VPK tool exited with code: {p.ExitCode}");
+
+            DeleteTempFiles();
+            Environment.Exit(p.ExitCode);
+        }
     }
 }

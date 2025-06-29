@@ -89,6 +89,13 @@ Provide a path to a vpk path to unpack it.
 			return;
 		}
 
+		if (Config.BSPFile.EndsWith(".vpk"))
+		{
+			UnpackVPK();
+			Message.Success($"Unpacked the vpk to {Path.Combine(Directory.GetCurrentDirectory(), Config.BSPFile[..^3])}");
+			return;
+		}
+
 		if (modify)
 			LoadPathsFromResourceConfig(Path.Combine(Config.ExeDirectory, "ResourceConfig.ini"));
 
