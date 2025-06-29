@@ -3,7 +3,7 @@ using GlobExpressions;
 
 namespace bspPack;
 
-class BSPPack
+partial class BSPPack
 {
 	private static List<string> sourceDirectories = [];
 	private static readonly List<string> includeFiles = [];
@@ -13,6 +13,7 @@ class BSPPack
 	private static readonly List<string> excludeFiles = [];
 	private static readonly List<string> excludeDirs = [];
 	private static readonly List<string> excludeVpkFiles = [];
+	private static readonly List<string> addonInfo = [];
 
 	private static string outputFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BSPZipFiles/files.txt");
 
@@ -26,6 +27,7 @@ class BSPPack
 	private static bool unpack;
 	private static bool search;
 	private static bool lowercase;
+	private static bool vpk;
 
 	static void Main(string[] args)
 	{
@@ -39,24 +41,27 @@ class BSPPack
 		modify = args.Contains("-M") || args.Contains("--modify");
 		search = args.Contains("-S") || args.Contains("--search");
 		lowercase = args.Contains("-L") || args.Contains("--lowercase");
+		vpk = args.Contains("-VPK") || args.Contains("--packvpk");
 
 		Config.LoadConfig(Path.Combine(Config.ExeDirectory, "config.ini"));
 
 		if (args.Length == 0)
 		{
 			string helpMessage = @"
-Please provide a path to the BSP.
+Provide a path to a bsp to pack it.
+Provide a path to a vpk path to unpack it.
 ## Flags
--V | --verbose            Outputs a complete listing of added assets
--D | --dryrun             Creates a txt file for bspzip usage but does not pack
--R | --renamenav          Renames the nav file to embed.nav
--N | --noswvtx            Skips packing unused .sw.vtx files to save filesize
--P | --particlemanifest   Generates a particle manifest based on particles used
--C | --compress           Compresses the BSP after packing
--M | --modify             Modifies PakFile based on ResourceConfig.ini
--U | --unpack             Unpacks the BSP to <filename>_unpacked
--S | --search             Searches /maps folder of the game directory for the BSP file
--L | --lowercase		  Lowercases content of /materials and /models directories
+-V   | --verbose            Outputs a complete listing of added assets
+-D   | --dryrun             Creates a txt file for bspzip usage but does not pack
+-R   | --renamenav          Renames the nav file to embed.nav
+-N   | --noswvtx            Skips packing unused .sw.vtx files to save filesize
+-P   | --particlemanifest   Generates a particle manifest based on particles used
+-C   | --compress           Compresses the BSP after packing
+-M   | --modify             Modifies PakFile based on ResourceConfig.ini
+-U   | --unpack             Unpacks the BSP to <filename>_unpacked
+-S   | --search             Searches /maps folder of the game directory for the BSP file
+-L   | --lowercase          Lowercases content of /materials and /models directories
+-VPK | --packvpk            Packs content of a bsp to a vpk. Can be used with -M flag without providing a bsp to pack only desired files  
 ";
 			Console.WriteLine(helpMessage);
 			return;
@@ -69,7 +74,7 @@ Please provide a path to the BSP.
 		else
 			Config.BSPFile = args[^1];
 
-		if (!File.Exists(Config.BSPFile))
+		if (!File.Exists(Config.BSPFile) && !vpk)
 		{
 			if (modify)
 			{
@@ -85,25 +90,10 @@ Please provide a path to the BSP.
 		}
 
 		if (modify)
-			LoadPathsFromFile(Path.Combine(Config.ExeDirectory, "ResourceConfig.ini"));
+			LoadPathsFromResourceConfig(Path.Combine(Config.ExeDirectory, "ResourceConfig.ini"));
 
-		Console.WriteLine("Reading BSP...");
-		FileInfo fileInfo = new(Config.BSPFile);
-		BSP bsp = LoadBSP(fileInfo);
-
-		string unpackDir;
-
-		if (unpack)
-		{
-			unpackDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Path.GetFileNameWithoutExtension(bsp.File.FullName) + "_unpacked");
-			AssetUtils.UnpackBSP(unpackDir);
-			Message.Success($"BSP unpacked to: {unpackDir}");
-			return;
-		}
-
-		unpackDir = Path.Combine(Config.TempFolder, Guid.NewGuid().ToString());
-		AssetUtils.UnpackBSP(unpackDir);
-		AssetUtils.FindBspPakDependencies(bsp, unpackDir);
+		if (includeDirs.Count != 0)
+			GetFilesFromIncludedDirs();
 
 		Console.WriteLine("\nLooking for search paths...");
 		sourceDirectories = AssetUtils.GetSourceDirectories(Config.GameFolder);
@@ -132,13 +122,33 @@ Please provide a path to the BSP.
 			}
 		}
 
+		if (vpk && !File.Exists(Config.BSPFile))
+		{
+			PakFile vpkPakfile = new(sourceDirectories, includeFiles, excludeFiles, excludeDirs, excludeVpkFiles, outputFile, noswvtx);
+			PackVPK(vpkPakfile);
+			return;
+		}
+
+		Console.WriteLine("\nReading BSP...");
+		FileInfo fileInfo = new(Config.BSPFile);
+		BSP bsp = LoadBSP(fileInfo);
+
+		string unpackDir;
+		if (unpack)
+		{
+			unpackDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Path.GetFileNameWithoutExtension(bsp.File.FullName) + "_unpacked");
+			AssetUtils.UnpackBSP(unpackDir);
+			Message.Success($"BSP unpacked to: {unpackDir}");
+			return;
+		}
+
+		unpackDir = Path.Combine(Config.TempFolder, Guid.NewGuid().ToString());
+		AssetUtils.UnpackBSP(unpackDir);
+		AssetUtils.FindBspPakDependencies(bsp, unpackDir);
 		AssetUtils.FindBspUtilityFiles(bsp, sourceDirectories, renamenav, false);
 
 		if (dryrun)
 			outputFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BSPZipFiles", $"{Path.GetFileNameWithoutExtension(bsp.File.FullName)}_files.txt");
-
-		if (includeDirs.Count != 0)
-			GetFilesFromIncludedDirs();
 
 		if (particlemanifest && !dryrun)
 		{
@@ -146,7 +156,7 @@ Please provide a path to the BSP.
 			bsp.ParticleManifest = manifest.particleManifest;
 		}
 
-		Console.WriteLine("\nInitializing pak file...");
+		Console.WriteLine("Initializing pak file...");
 		PakFile pakfile = new(bsp, sourceDirectories, includeFiles, excludeFiles, excludeDirs, excludeVpkFiles, outputFile, noswvtx);
 
 		if (includeFileLists.Count != 0)
@@ -168,6 +178,13 @@ Please provide a path to the BSP.
 			}
 		}
 
+		if (vpk)
+		{
+			PackVPK(pakfile);
+			DeleteTempFiles();
+			return;
+		}
+
 		Console.WriteLine("Writing file list...");
 		pakfile.OutputToFile();
 
@@ -177,8 +194,6 @@ Please provide a path to the BSP.
 			Message.Success($"Dry run finished! File saved to {outputFile}");
 			return;
 		}
-
-
 
 		Console.WriteLine("Running bspzip...");
 		PackBSP(outputFile);
@@ -218,7 +233,7 @@ Please provide a path to the BSP.
 		}
 	}
 
-	static void LoadPathsFromFile(string filePath)
+	static void LoadPathsFromResourceConfig(string filePath)
 	{
 		if (!File.Exists(filePath))
 		{
@@ -296,6 +311,14 @@ Please provide a path to the BSP.
 						break;
 					}
 					excludeVpkFiles.Add(trimmedLine);
+					break;
+				case "AddonInfo":
+					if (!File.Exists(trimmedLine))
+					{
+						Message.Warning($"WARNING: Could not find file {trimmedLine}");
+						break;
+					}
+					addonInfo.Add(trimmedLine);
 					break;
 			}
 		}
@@ -509,7 +532,8 @@ Please provide a path to the BSP.
 
 	static void DeleteTempFiles()
 	{
-		File.Delete(Config.BSPFile[..^4] + "_particles.txt");
+		if (File.Exists(Config.BSPFile[..^4] + "_particles.txt"))
+			File.Delete(Config.BSPFile[..^4] + "_particles.txt");
 
 		if (Directory.Exists(Config.TempFolder))
 			Directory.Delete(Config.TempFolder, recursive: true);

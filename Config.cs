@@ -21,12 +21,12 @@ public static class Config
 		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 		{
 			BSPZip = Path.Combine(GameFolder, @"../bin/win64", "bspzip.exe");
-			VPK = Path.Combine(GameFolder, @"../bin/win64, vpk.exe");
+			VPK = Path.Combine(GameFolder, @"../bin/win64", "vpk.exe");
 		}
 		else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
 		{
 			BSPZip = Path.Combine(GameFolder, @"../bin/linux64", "bspzip");
-			VPK = Path.Combine(GameFolder, @"../bin/linux64, vpk");
+			VPK = Path.Combine(GameFolder, @"../bin/linux64", "vpk");
 		}
 
 		KeysFolder = Path.Combine(ExeDirectory, "Keys");

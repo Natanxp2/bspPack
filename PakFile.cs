@@ -241,6 +241,26 @@ class PakFile
         }
     }
 
+    public PakFile(List<string> sourceDirectories, List<string> includeFiles, List<string> excludedFiles, List<string> excludedDirs, List<string> excludedVpkFiles, string outputFile, bool noswvtx)
+    {
+        mdlcount = vmtcount = pcfcount = soundcount = vehiclescriptcount = effectscriptcount = PanoramaMapBackgroundCount = 0;
+        sourceDirs = sourceDirectories;
+        fileName = outputFile;
+        noSwvtx = noswvtx;
+
+        this.excludedFiles = excludedFiles;
+        this.excludedDirs = excludedDirs;
+        this.excludedVpkFiles = excludedVpkFiles;
+        Files = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+
+        foreach (var file in includeFiles)
+        {
+            Message.Warning("ADDING FILES");
+            if (!AddFile(file))
+                Message.Warning($"WARNING: Failed to resolve internal path for {file}, skipping\n");
+        }
+    }
+
     public void OutputToFile()
     {
         var outputLines = new List<string>();
