@@ -13,7 +13,7 @@ partial class BSPPack
 	private static readonly List<string> excludeFiles = [];
 	private static readonly List<string> excludeDirs = [];
 	private static readonly List<string> excludeVpkFiles = [];
-	private static readonly List<string> addonInfo = [];
+	private static List<string> addonInfo = [];
 
 	private static string outputFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BSPZipFiles/files.txt");
 
