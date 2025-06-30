@@ -1,4 +1,4 @@
-using System.ComponentModel.Design;
+using System.Runtime.InteropServices;
 using System.Diagnostics;
 
 namespace bspPack;
@@ -118,20 +118,19 @@ partial class BSPPack
     {
         string arguments = $"a \"{targetVPK}\" \"@{responseFile}\"";
 
-        var p = new Process
+        ProcessStartInfo startInfo = new(Config.VPK, arguments)
         {
-            StartInfo = new ProcessStartInfo
-            {
-                WorkingDirectory = searchPath,
-                FileName = Config.VPK,
-                Arguments = arguments,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-            }
+            WorkingDirectory = searchPath,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
         };
 
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            PreloadBrokenLibraries(ref startInfo);
+
+        var p = new Process { StartInfo = startInfo };
         try
         {
             p.Start();
@@ -140,6 +139,7 @@ partial class BSPPack
         {
             Message.Error(e.ToString());
             Message.Error("Failed to run vpk packing tool");
+            DeleteTempFiles();
             Environment.Exit(1);
         }
 
@@ -223,18 +223,17 @@ partial class BSPPack
     {
         string arguments = Config.BSPFile;
 
-        var p = new Process
+        ProcessStartInfo startInfo = new(Config.VPK, arguments)
         {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = Config.VPK,
-                Arguments = arguments,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-            }
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
         };
 
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            PreloadBrokenLibraries(ref startInfo);
+
+        var p = new Process { StartInfo = startInfo };
         try
         {
             p.Start();
@@ -243,6 +242,7 @@ partial class BSPPack
         {
             Message.Error(e.ToString());
             Message.Error("Failed to run vpk packing tool");
+            DeleteTempFiles();
             Environment.Exit(1);
         }
 
@@ -274,19 +274,28 @@ partial class BSPPack
     {
         string arguments = $"l \"{VPKPath}\"";
 
-        var p = new Process
+        ProcessStartInfo startInfo = new(Config.VPK, arguments)
         {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = Config.VPK,
-                Arguments = arguments,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-            }
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
         };
 
-        p.Start();
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            PreloadBrokenLibraries(ref startInfo);
+
+        var p = new Process { StartInfo = startInfo };
+        try
+        {
+            p.Start();
+        }
+        catch (Exception e)
+        {
+            Message.Error(e.ToString());
+            Message.Error("Failed to run vpk packing tool");
+            DeleteTempFiles();
+            Environment.Exit(1);
+        }
 
         string output = p.StandardOutput.ReadToEnd();
         string errOutput = p.StandardError.ReadToEnd();

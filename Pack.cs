@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using GlobExpressions;
 
 namespace bspPack;
@@ -366,6 +367,9 @@ Provide a path to a vpk path to unpack it.
 				}
 		};
 
+		if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+			PreloadBrokenLibraries(ref startInfo);
+
 		var p = new Process { StartInfo = startInfo };
 
 		try
@@ -418,6 +422,9 @@ Provide a path to a vpk path to unpack it.
 					["VPROJECT"] = Config.GameFolder
 				}
 		};
+
+		if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+			PreloadBrokenLibraries(ref startInfo);
 
 		var p = new Process { StartInfo = startInfo };
 
@@ -551,5 +558,16 @@ Provide a path to a vpk path to unpack it.
 
 		if (Directory.Exists(Config.TempFolder))
 			Directory.Delete(Config.TempFolder, recursive: true);
+	}
+
+	public static void PreloadBrokenLibraries(ref ProcessStartInfo startInfo)
+	{
+		string[] brokenGames = ["cstrike", "csgo", "portal", "portal2", "tf"];
+
+		if (brokenGames.Contains(Path.GetFileName(Config.GameFolder)))
+		{
+			startInfo.Environment["LD_LIBRARY_PATH"] = Path.GetDirectoryName(Config.BSPZip);
+			startInfo.Environment["LD_PRELOAD"] = "libmimalloc.so";
+		}
 	}
 }

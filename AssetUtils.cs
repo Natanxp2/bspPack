@@ -1306,16 +1306,35 @@ static class AssetUtils
         arguments = arguments.Replace("$bspold", Config.BSPFile);
         arguments = arguments.Replace("$dir", unpackDir);
 
-        var startInfo = new ProcessStartInfo(Config.BSPZip, arguments);
-        startInfo.UseShellExecute = false;
-        startInfo.CreateNoWindow = true;
-        startInfo.RedirectStandardOutput = true;
-        startInfo.EnvironmentVariables["VPROJECT"] = Config.GameFolder;
+        ProcessStartInfo startInfo = new(Config.BSPZip, arguments)
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            EnvironmentVariables =
+                {
+                    ["VPROJECT"] = Config.GameFolder
+                }
+        };
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            BSPPack.PreloadBrokenLibraries(ref startInfo);
 
         var p = new Process { StartInfo = startInfo };
         p.Start();
         string output = p.StandardOutput.ReadToEnd();
         p.WaitForExit();
+
+        if (p.ExitCode != 0)
+        {
+            // this indicates an access violation. BSPZIP may have crashed because of too many files being packed
+            if (p.ExitCode == -1073741819)
+                Message.Error($"VPK tool exited with code: {p.ExitCode}, this might indicate that too many files are being packed");
+            else
+                Message.Error($"VPK tool exited with code: {p.ExitCode}");
+
+            Environment.Exit(p.ExitCode);
+        }
     }
 }
 
