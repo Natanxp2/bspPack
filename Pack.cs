@@ -12,6 +12,7 @@ partial class BSPPack
 	private static readonly List<string> includeSourceDirectories = [];
 	private static readonly List<string> excludeFiles = [];
 	private static readonly List<string> excludeDirs = [];
+	private static readonly List<string> excludeVpks = [];
 	private static readonly List<string> excludeVpkFiles = [];
 	private static List<string> addonInfo = [];
 
@@ -311,13 +312,13 @@ Provide a path to a vpk path to unpack it.
 					}
 					excludeDirs.Add(trimmedLine.Replace("\\", "/"));
 					break;
-				case "ExcludeVpkFiles":
+				case "ExcludeVpks":
 					if (!File.Exists(trimmedLine))
 					{
 						Message.Warning($"WARNING: Could not find file {trimmedLine}");
 						break;
 					}
-					excludeVpkFiles.Add(trimmedLine);
+					excludeVpks.Add(trimmedLine);
 					break;
 				case "AddonInfo":
 					if (!File.Exists(trimmedLine))
@@ -328,6 +329,12 @@ Provide a path to a vpk path to unpack it.
 					addonInfo.Add(trimmedLine);
 					break;
 			}
+		}
+
+		if (excludeVpks.Count != 0)
+		{
+			foreach (string vpk in excludeVpks)
+				excludeVpkFiles.AddRange(GetVPKFileList(vpk));
 		}
 	}
 

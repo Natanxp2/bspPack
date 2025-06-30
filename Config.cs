@@ -51,7 +51,7 @@ public static class Config
 
 		var lines = new List<string>
 			{
-				"# One path per line",
+				"# List one path per line",
 				"[IncludeFiles]",
 				"",
 				"[IncludeFileLists]",
@@ -64,7 +64,7 @@ public static class Config
 				"",
 				"[ExcludeDirs]",
 				"",
-				"[ExcludeVpkFiles]",
+				"[ExcludeVpks]",
 				"",
 				"[AddonInfo]",
 				"",
