@@ -8,7 +8,7 @@ Paths to **game folder** ( folder of gameinfo.txt ) and to **steam installation 
 Running `bspPack --modify` creates `ResourceConfig.ini` which is used instead of multiple other flags in CompilePal.<br>
 If compressed BSP is provided automatic decompression is attempted by running bspzip with -repack flag.
 
-Provide a path to a **.bsp** to pack it.
+Provide a path to a **.bsp** to pack it.<br>
 Provide a path to a **.vpk** to unpack it.
 
 ## Known issues
