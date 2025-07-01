@@ -46,7 +46,7 @@ public class PCF
             if (s.EndsWith(".vmt") || s.EndsWith(".vtf"))
             {
                 // Alien Swarm does not prepend materials/ to particles, add it just in case
-                if (this.BinaryVersion == 5 && this.PcfVersion == 2)
+                if (BinaryVersion == 5 && PcfVersion == 2)
                     materialNames.Add("materials/" + s);
 
                 materialNames.Add(s);
@@ -90,8 +90,8 @@ public static class ParticleUtils
         string[] magicSplit = magicString.Split(' ');
 
         //Store binary and pcf versions
-        Int32.TryParse(magicSplit[0], out pcf.BinaryVersion);
-        Int32.TryParse(magicSplit[3], out pcf.PcfVersion);
+        _ = int.TryParse(magicSplit[0], out pcf.BinaryVersion);
+        _ = int.TryParse(magicSplit[3], out pcf.PcfVersion);
 
         //Different versions have different stringDict sizes
         if (pcf.BinaryVersion != 4 && pcf.BinaryVersion != 5)
@@ -193,8 +193,8 @@ public static class ParticleUtils
         string[] magicSplit = magicString.Split(' ');
 
         //Store binary and pcf versions
-        Int32.TryParse(magicSplit[0], out pcf.BinaryVersion);
-        Int32.TryParse(magicSplit[3], out pcf.PcfVersion);
+        _ = int.TryParse(magicSplit[0], out pcf.BinaryVersion);
+        _ = int.TryParse(magicSplit[3], out pcf.PcfVersion);
 
         //Different versions have different stringDict sizes
         if (pcf.BinaryVersion != 4 && pcf.BinaryVersion != 5)
@@ -328,9 +328,9 @@ public static class ParticleUtils
 class ParticleManifest
 {
     //Class responsible for holding information about particles
-    private List<PCF> particles = [];
+    private readonly List<PCF> particles = [];
     private readonly string internalPath = "particles";
-    private readonly string filepath = String.Empty;
+    private readonly string filepath = string.Empty;
     private readonly string baseDirectory;
 
     public KeyValuePair<string, string> particleManifest { get; private set; }
@@ -395,7 +395,6 @@ class ParticleManifest
                         conflictingParticles.Add(particles[i]);
                         conflictingParticles.Add(particles[j]);
                     }
-
                 }
             }
         }
@@ -407,22 +406,15 @@ class ParticleManifest
             Message.Warning($"\nFound {conflictingParticles.Count / 2} conflicting particle {pairText}:");
             //Remove particle if it is in a particle conflict, add back when conflict is manually resolved
             foreach (PCF conflictParticle in conflictingParticles)
-            {
                 particles.Remove(conflictParticle);
-            }
 
             List<PCF> resolvedConflicts = [];
 
             for (int i = 0; i < conflictingParticles.Count; i += 2)
-            {
                 resolvedConflicts.Add(ResolveConflicts(conflictingParticles[i], conflictingParticles[i + 1], i / 2));
-            }
-
 
             //Add resolved conflicts back into particle list
             particles.AddRange(resolvedConflicts);
-
-
         }
 
         //Remove duplicates
@@ -476,17 +468,8 @@ class ParticleManifest
             Message.Warning(p1.FilePath);
             Message.Write("[2]: ", ConsoleColor.Yellow);
             Message.Warning(p2.FilePath);
-            Message.Write("\nChoose which particle to use: ", ConsoleColor.Yellow);
-            int selected = -1;
 
-            while (selected < 1 || selected > 2)
-            {
-                string? input = Console.ReadLine();
-                if (!int.TryParse(input, out selected) || selected < 1 || selected > 2)
-                {
-                    Message.Write("Invalid selection. Please enter a valid number: ", ConsoleColor.Yellow);
-                }
-            }
+            int selected = Message.PromptInt("Choose which particle to use: ", 1, 2, ConsoleColor.Yellow);
 
             if (selected == 1)
                 return p1;

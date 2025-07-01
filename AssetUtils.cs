@@ -8,7 +8,7 @@ namespace bspPack;
 
 static class AssetUtils
 {
-    public static ValveKeyValue.KVSerializer KVSerializer = ValveKeyValue.KVSerializer.Create(ValveKeyValue.KVSerializationFormat.KeyValues1Text);
+    public static KVSerializer KVSerializer = KVSerializer.Create(KVSerializationFormat.KeyValues1Text);
 
     public static Tuple<List<string>, List<string>> FindMdlMaterialsAndModels(string path, List<int>? skins = null, List<string>? vtxVmts = null)
     {
@@ -20,8 +20,8 @@ static class AssetUtils
 
         if (File.Exists(path))
         {
-            using FileStream mdl = new FileStream(path, FileMode.Open);
-            BinaryReader reader = new BinaryReader(mdl);
+            using FileStream mdl = new(path, FileMode.Open);
+            BinaryReader reader = new(mdl);
 
             mdl.Seek(4, SeekOrigin.Begin);
             int ver = reader.ReadInt32();
@@ -150,7 +150,7 @@ static class AssetUtils
                         trimmedtable[i, j] = skintable[i, material_ids[j]];
 
                 // add default skin 0 in case of non-existing skin indexes
-                if (skins.IndexOf(0) == -1 && skins.Count(s => s >= trimmedtable.GetLength(0)) != 0)
+                if (skins.IndexOf(0) == -1 && skins.Any(s => s >= trimmedtable.GetLength(0)))
                     skins.Add(0);
 
                 // use the trimmed table to fetch used vmts
@@ -222,10 +222,10 @@ static class AssetUtils
             if (keyvalueCount > 0)
             {
                 mdl.Seek(keyvalueIndex, SeekOrigin.Begin);
-                string kvString = new string(reader.ReadChars(keyvalueCount - 1));
+                string kvString = new(reader.ReadChars(keyvalueCount - 1));
 
                 // "mdlkeyvalue" and "{" are on separate lines, merge them or it doesnt parse kv name
-                int firstNewlineIndex = kvString.IndexOf("\n", StringComparison.Ordinal);
+                int firstNewlineIndex = kvString.IndexOf('\n', StringComparison.Ordinal);
                 if (firstNewlineIndex > 0)
                     kvString = kvString.Remove(firstNewlineIndex, 1);
 
@@ -274,8 +274,8 @@ static class AssetUtils
         {
             try
             {
-                using FileStream vtx = new FileStream(path, FileMode.Open);
-                BinaryReader reader = new BinaryReader(vtx);
+                using FileStream vtx = new(path, FileMode.Open);
+                BinaryReader reader = new(vtx);
 
                 int version = reader.ReadInt32();
 
@@ -337,32 +337,30 @@ static class AssetUtils
 
         if (File.Exists(path))
         {
-            using (FileStream phy = new FileStream(path, FileMode.Open))
+            using FileStream phy = new(path, FileMode.Open);
+            using (BinaryReader reader = new(phy))
             {
-                using (BinaryReader reader = new BinaryReader(phy))
+                int header_size = reader.ReadInt32();
+                phy.Seek(4, SeekOrigin.Current);
+                int solidCount = reader.ReadInt32();
+
+                phy.Seek(header_size, SeekOrigin.Begin);
+                int solid_size = reader.ReadInt32();
+
+                phy.Seek(solid_size, SeekOrigin.Current);
+                string something = ReadNullTerminatedString(phy, reader);
+
+                // TODO: can probably use KVSerializer to parse this
+                string[] entries = something.Split(['{', '}']);
+                for (int i = 0; i < entries.Length; i++)
                 {
-                    int header_size = reader.ReadInt32();
-                    phy.Seek(4, SeekOrigin.Current);
-                    int solidCount = reader.ReadInt32();
-
-                    phy.Seek(header_size, SeekOrigin.Begin);
-                    int solid_size = reader.ReadInt32();
-
-                    phy.Seek(solid_size, SeekOrigin.Current);
-                    string something = ReadNullTerminatedString(phy, reader);
-
-                    // TODO: can probably use KVSerializer to parse this
-                    string[] entries = something.Split(new char[] { '{', '}' });
-                    for (int i = 0; i < entries.Count(); i++)
+                    if (entries[i].Trim().Equals("break"))
                     {
-                        if (entries[i].Trim().Equals("break"))
-                        {
-                            string[] entry = entries[i + 1].Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                        string[] entry = entries[i + 1].Split([' '], StringSplitOptions.RemoveEmptyEntries);
 
-                            for (int j = 0; j < entry.Count(); j++)
-                                if (entry[j].Equals("\"model\"") || entry[j].Equals("\"ragdoll\""))
-                                    models.Add("models{Path.DirectorySeparatorChar}" + entry[j + 1].Trim('"') + (entry[j + 1].Trim('"').EndsWith(".mdl") ? "" : ".mdl"));
-                        }
+                        for (int j = 0; j < entry.Length; j++)
+                            if (entry[j].Equals("\"model\"") || entry[j].Equals("\"ragdoll\""))
+                                models.Add("models{Path.DirectorySeparatorChar}" + entry[j + 1].Trim('"') + (entry[j + 1].Trim('"').EndsWith(".mdl") ? "" : ".mdl"));
                     }
                 }
             }
@@ -503,12 +501,12 @@ static class AssetUtils
             line = "";
         }
 
-        line = line.Trim(new char[] { ' ', '/', '\\' }); // removes leading slashes
+        line = line.Trim([' ', '/', '\\']); // removes leading slashes
         line = line.Replace('\\', '/'); // normalize slashes
         line = Regex.Replace(line, "/+", "/"); // remove duplicate slashes
 
         if (line.StartsWith("materials/"))
-            line = line.Remove(0, "materials/".Length); // removes materials/ if its the beginning of the string for consistency
+            line = line[10..]; // removes materials/ if its the beginning of the string for consistency
         if (line.EndsWith(".vmt") || line.EndsWith(".vtf")) // removes extentions if present for consistency
             line = line[..^4];
         return line.ToLower();
@@ -518,7 +516,7 @@ static class AssetUtils
     {
         // finds audio files from soundscape file
 
-        char[] special_caracters = new char[] { '*', '#', '@', '>', '<', '^', '(', ')', '}', '$', '!', '?', ' ' };
+        char[] special_caracters = ['*', '#', '@', '>', '<', '^', '(', ')', '}', '$', '!', '?', ' '];
 
         List<string> audioFiles = [];
         foreach (string line in File.ReadAllLines(fullpath))
@@ -526,7 +524,7 @@ static class AssetUtils
             string param = Regex.Replace(line, "[\t|\"]", " ").Trim();
             if (param.StartsWith("wave", StringComparison.OrdinalIgnoreCase))
             {
-                string clip = param.Split(new char[] { ' ' }, 2)[1].Trim(special_caracters);
+                string clip = param.Split([' '], 2)[1].Trim(special_caracters);
                 audioFiles.Add("sound/" + clip);
             }
         }
@@ -930,7 +928,7 @@ static class AssetUtils
         foreach (string source in sourceDirectories)
         {
             string externalDir = source + "/" + internalDir;
-            DirectoryInfo dir = new DirectoryInfo(externalDir);
+            DirectoryInfo dir = new(externalDir);
 
             if (dir.Exists)
                 foreach (FileInfo f in dir.GetFiles(searchPattern))
@@ -970,7 +968,7 @@ static class AssetUtils
                 }
             }
         }
-        bsp.VscriptList = vscripts.Distinct().ToList();
+        bsp.VscriptList = [.. vscripts.Distinct()];
     }
 
     private static string ReadNullTerminatedString(FileStream fs, BinaryReader reader)
@@ -983,13 +981,13 @@ static class AssetUtils
             verString.Add(v);
         } while (v != '\0' && fs.Position != fs.Length);
 
-        return Encoding.ASCII.GetString(verString.ToArray()).Trim('\0');
+        return Encoding.ASCII.GetString([.. verString]).Trim('\0');
     }
 
     public static List<string> GetSourceDirectories(string gamePath, bool verbose = true)
     {
         List<string> sourceDirectories = [];
-        string gameInfoPath = System.IO.Path.Combine(gamePath, "gameinfo.txt");
+        string gameInfoPath = Path.Combine(gamePath, "gameinfo.txt");
         string rootPath = Directory.GetParent(gamePath)!.ToString();
 
         if (!File.Exists(gameInfoPath))
@@ -1029,16 +1027,16 @@ static class AssetUtils
                     continue;
 
                 // ignore unsearchable paths. TODO: will need to remove .vpk from this check if we add support for packing from assets within vpk files
-                if (searchPath.Contains("|") && !searchPath.Contains("|gameinfo_path|") || searchPath.Contains(".vpk")) continue;
+                if (searchPath.Contains('|') && !searchPath.Contains("|gameinfo_path|") || searchPath.Contains(".vpk")) continue;
 
                 // wildcard paths
-                if (searchPath.Contains("*"))
+                if (searchPath.Contains('*'))
                 {
                     string fullPath = searchPath;
-                    if (fullPath.Contains(("|gameinfo_path|")))
+                    if (fullPath.Contains("|gameinfo_path|"))
                     {
                         string newPath = searchPath.Replace("*", "").Replace("|gameinfo_path|", "");
-                        fullPath = System.IO.Path.GetFullPath(gamePath + Path.DirectorySeparatorChar + newPath.TrimEnd(Path.DirectorySeparatorChar));
+                        fullPath = Path.GetFullPath(gamePath + Path.DirectorySeparatorChar + newPath.TrimEnd(Path.DirectorySeparatorChar));
                     }
                     if (Path.IsPathRooted(fullPath.Replace("*", "")))
                     {
@@ -1047,7 +1045,7 @@ static class AssetUtils
                     else
                     {
                         string newPath = fullPath.Replace("*", "");
-                        fullPath = System.IO.Path.GetFullPath(rootPath + Path.DirectorySeparatorChar + newPath.TrimEnd(Path.DirectorySeparatorChar));
+                        fullPath = Path.GetFullPath(rootPath + Path.DirectorySeparatorChar + newPath.TrimEnd(Path.DirectorySeparatorChar));
                     }
 
                     if (verbose)
@@ -1080,7 +1078,7 @@ static class AssetUtils
                 {
                     try
                     {
-                        string fullPath = System.IO.Path.GetFullPath(rootPath + Path.DirectorySeparatorChar + searchPath.TrimEnd(Path.DirectorySeparatorChar));
+                        string fullPath = Path.GetFullPath(rootPath + Path.DirectorySeparatorChar + searchPath.TrimEnd(Path.DirectorySeparatorChar));
 
                         if (verbose)
                             Console.WriteLine("Found search path: {0}", fullPath);
@@ -1109,7 +1107,7 @@ static class AssetUtils
 
         }
 
-        return sourceDirectories.Distinct().ToList();
+        return [.. sourceDirectories.Distinct()];
     }
 
     private static List<string>? GetMountedGamesSourceDirectories(KVDocument gameInfo, string mountsPath)
@@ -1140,7 +1138,7 @@ static class AssetUtils
                     mounts.AddRange(additionalMounts);
 
                     // remove duplicates, prefer results from mounts.kv
-                    mounts = mounts.GroupBy(g => g.Name).Select(grp => grp.Last()).ToList();
+                    mounts = [.. mounts.GroupBy(g => g.Name).Select(grp => grp.Last())];
                 }
                 else
                 {
@@ -1322,7 +1320,7 @@ static class AssetUtils
 
         var p = new Process { StartInfo = startInfo };
         p.Start();
-        string output = p.StandardOutput.ReadToEnd();
+        _ = p.StandardOutput.ReadToEnd();
         p.WaitForExit();
 
         if (p.ExitCode != 0)

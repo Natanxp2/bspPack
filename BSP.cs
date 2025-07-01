@@ -58,55 +58,53 @@ class BSP
 
     public BSP(FileInfo file)
     {
-        this.File = file;
+        File = file;
         Offsets = new KeyValuePair<int, int>[64];
 
-        using (var bsp = new FileStream(file.FullName, FileMode.Open, FileAccess.Read, FileShare.Read))
+        using var bsp = new FileStream(file.FullName, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using (var reader = new BinaryReader(bsp))
         {
-            using (var reader = new BinaryReader(bsp))
+            bsp.Seek(4, SeekOrigin.Begin); // skip header
+            this.BspVersion = reader.ReadInt32();
+
+            if (reader.ReadInt32() == 0 && this.BspVersion == 21)
+                IsL4D2 = true;
+
+            bsp.Seek(-4, SeekOrigin.Current);
+
+            for (int i = 0; i < Offsets.GetLength(0); i++)
             {
-                bsp.Seek(4, SeekOrigin.Begin); // skip header
-                this.BspVersion = reader.ReadInt32();
-
-                if (reader.ReadInt32() == 0 && this.BspVersion == 21)
-                    IsL4D2 = true;
-
-                bsp.Seek(-4, SeekOrigin.Current);
-
-                for (int i = 0; i < Offsets.GetLength(0); i++)
+                if (IsL4D2)
                 {
-                    if (IsL4D2)
-                    {
-                        bsp.Seek(4, SeekOrigin.Current);
-                        Offsets[i] = new KeyValuePair<int, int>(reader.ReadInt32(), reader.ReadInt32());
-                        bsp.Seek(4, SeekOrigin.Current);
-                    }
-                    else
-                    {
-                        Offsets[i] = new KeyValuePair<int, int>(reader.ReadInt32(), reader.ReadInt32());
-                        bsp.Seek(8, SeekOrigin.Current);
-                    }
+                    bsp.Seek(4, SeekOrigin.Current);
+                    Offsets[i] = new KeyValuePair<int, int>(reader.ReadInt32(), reader.ReadInt32());
+                    bsp.Seek(4, SeekOrigin.Current);
                 }
-
-                bsp.Seek(Offsets[0].Key, SeekOrigin.Begin);
-                if (reader.ReadChars(4).SequenceEqual("LZMA".ToCharArray()))
+                else
                 {
-                    throw new FormatException("BSP is compressed. Trying to decompress...");
+                    Offsets[i] = new KeyValuePair<int, int>(reader.ReadInt32(), reader.ReadInt32());
+                    bsp.Seek(8, SeekOrigin.Current);
                 }
-
-                buildEntityList(bsp, reader);
-                buildEntModelList();
-                buildModelList(bsp, reader);
-                buildParticleList();
-                buildEntTextureList();
-                buildTextureList(bsp, reader);
-                buildEntSoundList();
-                buildMiscList();
             }
+
+            bsp.Seek(Offsets[0].Key, SeekOrigin.Begin);
+            if (reader.ReadChars(4).SequenceEqual("LZMA".ToCharArray()))
+            {
+                throw new FormatException("BSP is compressed. Trying to decompress...");
+            }
+
+            BuildEntityList(bsp, reader);
+            BuildEntModelList();
+            BuildModelList(bsp, reader);
+            BuildParticleList();
+            BuildEntTextureList();
+            BuildTextureList(bsp, reader);
+            BuildEntSoundList();
+            BuildMiscList();
         }
     }
 
-    public void buildEntityList(FileStream bsp, BinaryReader reader)
+    public void BuildEntityList(FileStream bsp, BinaryReader reader)
     {
         EntityList = [];
         EntityListArrayForm = [];
@@ -139,13 +137,13 @@ class BSP
                 }
 
 
-                string rawent = Encoding.ASCII.GetString(ents.ToArray());
-                Dictionary<string, string> entity = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+                string rawent = Encoding.ASCII.GetString([.. ents]);
+                Dictionary<string, string> entity = new(StringComparer.InvariantCultureIgnoreCase);
                 var entityArrayFormat = new List<Tuple<string, string>>();
                 // split on \n, ignore \n inside of quotes
                 foreach (string s in Regex.Split(rawent, "(?=(?:(?:[^\"]*\"){2})*[^\"]*$)\\n"))
                 {
-                    if (s.Count() != 0)
+                    if (s.Length != 0)
                     {
                         // split on non escaped quotes
                         string[] c = Regex.Split(s, "(?<!\\\\)[\"\"]");
@@ -161,7 +159,7 @@ class BSP
         }
     }
 
-    public void buildTextureList(FileStream bsp, BinaryReader reader)
+    public void BuildTextureList(FileStream bsp, BinaryReader reader)
     {
         // builds the list of textures applied to brushes
 
@@ -174,7 +172,7 @@ class BSP
         TextureList = new List<string>(Encoding.ASCII.GetString(reader.ReadBytes(Offsets[43].Value)).Split('\0'));
         for (int i = 0; i < TextureList.Count; i++)
         {
-            if (TextureList[i].StartsWith("/")) // materials in root level material directory start with /
+            if (TextureList[i].StartsWith('/')) // materials in root level material directory start with /
 
                 //For some reason some texture names are converted to upper case in the bsp. 
                 //Since linux pathnames are case sensitive the only solution I found so far is to normalize them to lower case 
@@ -192,22 +190,22 @@ class BSP
 
         // find skybox materials
         Dictionary<string, string> worldspawn = EntityList.FirstOrDefault(item => item["classname"] == "worldspawn", []);
-        if (worldspawn.ContainsKey("skyname"))
+        if (worldspawn.TryGetValue("skyname", out string? skyname))
             foreach (string s in new string[] { "", "bk", "dn", "ft", "lf", "rt", "up" })
             {
-                TextureList.Add("materials/skybox/" + worldspawn["skyname"] + s + ".vmt");
-                TextureList.Add("materials/skybox/" + worldspawn["skyname"] + "_hdr" + s + ".vmt");
+                TextureList.Add("materials/skybox/" + skyname + s + ".vmt");
+                TextureList.Add("materials/skybox/" + skyname + "_hdr" + s + ".vmt");
             }
 
         // find detail materials
-        if (worldspawn.ContainsKey("detailmaterial"))
-            TextureList.Add("materials/" + worldspawn["detailmaterial"] + ".vmt");
+        if (worldspawn.TryGetValue("detailmaterial", out string? detailmaterial))
+            TextureList.Add("materials/" + detailmaterial + ".vmt");
 
         // find menu photos
         TextureList.Add("materials/vgui/maps/menu_photos_" + mapname + ".vmt");
     }
 
-    public void buildEntTextureList()
+    public void BuildEntTextureList()
     {
         // builds the list of textures referenced in entities
 
@@ -221,35 +219,31 @@ class BSP
                 if (Keys.vmfMaterialKeys.Contains(prop.Key.ToLower()))
                 {
                     materials.Add(prop.Value);
-                    if (prop.Key.ToLower().StartsWith("team_icon"))
+                    if (prop.Key.StartsWith("team_icon", StringComparison.InvariantCultureIgnoreCase))
                         materials.Add(prop.Value + "_locked");
                 }
 
             }
 
-            if (ent["classname"].Contains("skybox_swapper") && ent.ContainsKey("SkyboxName"))
+            if (ent["classname"].Contains("skybox_swapper") && ent.TryGetValue("SkyboxName", out string? skyboxname))
             {
-                if (ent.ContainsKey("targetname"))
-                {
-                    skybox_swappers.Add(ent["targetname"].ToLower());
-                }
+                if (ent.TryGetValue("targetname", out string? targetname))
+                    skybox_swappers.Add(targetname.ToLower());
 
                 foreach (string s in new string[] { "", "bk", "dn", "ft", "lf", "rt", "up" })
                 {
-                    materials.Add("skybox/" + ent["SkyboxName"] + s + ".vmt");
-                    materials.Add("skybox/" + ent["SkyboxName"] + "_hdr" + s + ".vmt");
+                    materials.Add("skybox/" + skyboxname + s + ".vmt");
+                    materials.Add("skybox/" + skyboxname + "_hdr" + s + ".vmt");
                 }
             }
 
             // special condition for sprites
-            if (ent["classname"].Contains("sprite") && ent.ContainsKey("model"))
+            if (ent["classname"].Contains("sprite") && ent.TryGetValue("model", out string? model))
             {
-                var model = ent["model"];
                 // strip leading materials folder
                 if (model.StartsWith("materials/", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    model = model.Substring(10);
-                }
+                    model = model[10..];
+
                 materials.Add(model);
             }
 
@@ -363,7 +357,7 @@ class BSP
         }
     }
 
-    public void buildModelList(FileStream bsp, BinaryReader reader)
+    public void BuildModelList(FileStream bsp, BinaryReader reader)
     {
         // builds the list of models that are from prop_static
 
@@ -431,7 +425,7 @@ class BSP
 
     }
 
-    public void buildEntModelList()
+    public void BuildEntModelList()
     {
         // builds the list of models referenced in entities
 
@@ -480,7 +474,7 @@ class BSP
         }
     }
 
-    public void buildEntSoundList()
+    public void BuildEntSoundList()
     {
         // builds the list of sounds referenced in entities
         EntSoundList = [];
@@ -523,14 +517,14 @@ class BSP
         }
     }
     // color correction, etc.
-    public void buildMiscList()
+    public void BuildMiscList()
     {
         MiscList = [];
 
         // find color correction files
         foreach (Dictionary<string, string> cc in EntityList.Where(item => item["classname"].StartsWith("color_correction")))
-            if (cc.ContainsKey("filename"))
-                MiscList.Add(cc["filename"]);
+            if (cc.TryGetValue("filename", out string? filename))
+                MiscList.Add(filename);
 
         // pack I/O referenced TF2 upgrade files
         // need to use array form of entity because multiple outputs with same command can't be stored in dict
@@ -551,7 +545,7 @@ class BSP
         }
     }
 
-    public void buildParticleList()
+    public void BuildParticleList()
     {
         ParticleList = [];
         foreach (Dictionary<string, string> ent in EntityList)
@@ -567,9 +561,9 @@ class BSP
     /// <returns>Tuple containing (target, command, parameter)</returns>
     private Tuple<string, string, string>? ParseIO(string property)
     {
-        if (!property.Contains("\u001b")) return null;
+        if (!property.Contains('\u001b')) return null;
 
-        var io = property.Split("\u001b");
+        var io = property.Split('\u001b');
         if (io.Length != 5)
         {
             Message.Warning($"WARNING: Failed to decode IO, ignoring: {property}");

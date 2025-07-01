@@ -253,10 +253,10 @@ Provide a path to a vpk path to unpack it.
 		string currentSection = "";
 		foreach (var line in File.ReadLines(filePath))
 		{
-			if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#"))
+			if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#'))
 				continue;
 
-			if (line.StartsWith("[") && line.EndsWith("]"))
+			if (line.StartsWith('[') && line.EndsWith(']'))
 			{
 				currentSection = line.Trim('[', ']');
 				continue;

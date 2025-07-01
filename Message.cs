@@ -58,4 +58,20 @@ class Message
         Write(prompt, color);
         return Console.ReadLine() ?? string.Empty;
     }
+
+    public static int PromptInt(string prompt, int min, int max, ConsoleColor? color = null)
+    {
+        Write(prompt, color);
+
+        int selected = int.MinValue;
+        while (selected < min || selected > max)
+        {
+            string? input = Console.ReadLine();
+            if (!int.TryParse(input, out selected) || selected < min || selected > max)
+            {
+                Write("Invalid selection. Please enter a valid number: ", ConsoleColor.Yellow);
+            }
+        }
+        return selected;
+    }
 }

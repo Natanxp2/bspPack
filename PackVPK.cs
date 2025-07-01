@@ -43,7 +43,7 @@ partial class BSPPack
         //It also packs it by default if it's found but I don't understand why that would be desired in all cases.
 
         //I believe what's meant to happen is add the bsp from /maps folder so that it has a proper structure in the vpk however another possibilty is
-        //using the same approach that's used for addon info files, copy the bsp to GameFolder and adding from there
+        //using the same approach that's used for addon info files, copying the bsp to GameFolder and adding from there
 
         //I need for research this more but for now I'll just add it from /maps as that seems more likely to be correct
 
@@ -51,11 +51,11 @@ partial class BSPPack
         //Relevant code in CompilePal is in Pack.cs -> if(packvpk) block
         //https://github.com/ruarai/CompilePal/blob/c52131c36f28d24d8ae969d8bad1eec19483f31c/CompilePalX/Compilers/BSPPack/Pack.cs#L319
 
+        //Copy implementation if that turns out to be the proper approach is commented out
+
         // string bspCopyPath = string.Empty;
         if (File.Exists(Config.BSPFile) && PackBSPToVPK())
         {
-            //Copy implementation if that turns out to be the proper approach
-
             string bspName = Path.GetFileName(Config.BSPFile);
             // bspCopyPath = Path.Combine(Config.GameFolder, bspName);
             // File.Copy(Config.BSPFile, bspCopyPath, true);
@@ -193,18 +193,8 @@ partial class BSPPack
             Message.Write($"[{i + 1}]: ");
             Message.Warning(addonInfo[i]);
         }
-        Message.Warning("Choose which one to pack: ");
 
-        int selected = -1;
-        while (selected < 1 || selected > addonInfo.Count)
-        {
-            string? input = Console.ReadLine();
-            if (!int.TryParse(input, out selected) || selected < 1 || selected > addonInfo.Count)
-            {
-                Message.Write("Invalid selection. Please enter a valid number: ", ConsoleColor.Yellow);
-            }
-        }
-
+        int selected = Message.PromptInt("Choose which one to pack: ", 1, addonInfo.Count, ConsoleColor.Yellow);
         return addonInfo[selected - 1];
     }
 

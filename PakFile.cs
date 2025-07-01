@@ -9,7 +9,7 @@ class PakFile
 
     // the dictionary is formated as <internalPath, externalPath>
     // matching the bspzip specification https://developer.valvesoftware.com/wiki/BSPZIP
-    private IDictionary<string, string> Files;
+    private readonly IDictionary<string, string> Files;
 
     private bool AddFile(string internalPath, string externalPath)
     {
@@ -47,7 +47,7 @@ class PakFile
     /// <param name="externalPath"></param>
     private void AddGenericFile(string internalPath, string externalPath)
     {
-        FileInfo fileInfo = new FileInfo(externalPath);
+        FileInfo fileInfo = new(externalPath);
 
         // try to determine file type by extension
         switch (fileInfo.Extension)
@@ -113,27 +113,27 @@ class PakFile
         return true;
     }
 
-    private List<string> excludedFiles;
-    private List<string> excludedDirs;
-    private List<string> excludedVpkFiles;
+    private readonly List<string> excludedFiles;
+    private readonly List<string> excludedDirs;
+    private readonly List<string> excludedVpkFiles;
 
-    private List<string> sourceDirs;
-    private string fileName;
+    private readonly List<string> sourceDirs;
+    private readonly string fileName;
 
-    public int mdlcount { get; private set; }
-    public int vmtcount { get; private set; }
-    public int pcfcount { get; private set; }
-    public int soundcount { get; private set; }
-    public int vehiclescriptcount { get; private set; }
-    public int effectscriptcount { get; private set; }
-    public int vscriptcount { get; private set; }
+    public int MdlCount { get; private set; }
+    public int VmtCount { get; private set; }
+    public int PcfCount { get; private set; }
+    public int SoundCount { get; private set; }
+    public int VehicleScriptCount { get; private set; }
+    public int EffectScriptCount { get; private set; }
+    public int VscriptCount { get; private set; }
     public int PanoramaMapBackgroundCount { get; private set; }
 
     private bool noSwvtx;
 
     public PakFile(BSP bsp, List<string> sourceDirectories, List<string> includeFiles, List<string> excludedFiles, List<string> excludedDirs, List<string> excludedVpkFiles, string outputFile, bool noswvtx)
     {
-        mdlcount = vmtcount = pcfcount = soundcount = vehiclescriptcount = effectscriptcount = PanoramaMapBackgroundCount = 0;
+        MdlCount = VmtCount = PcfCount = SoundCount = VehicleScriptCount = EffectScriptCount = PanoramaMapBackgroundCount = 0;
         sourceDirs = sourceDirectories;
         fileName = outputFile;
         noSwvtx = noswvtx;
@@ -143,53 +143,53 @@ class PakFile
         this.excludedVpkFiles = excludedVpkFiles;
         Files = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 
-        if (bsp.Nav.Key != default(string))
-            AddFile(bsp.Nav, (b => b.Nav = default), bsp);
+        if (bsp.Nav.Key != default)
+            AddFile(bsp.Nav, b => b.Nav = default, bsp);
 
-        if (bsp.Detail.Key != default(string))
-            AddFile(bsp.Detail, (b => b.Detail = default), bsp);
+        if (bsp.Detail.Key != default)
+            AddFile(bsp.Detail, b => b.Detail = default, bsp);
 
-        if (bsp.Kv.Key != default(string))
-            AddFile(bsp.Kv, (b => b.Kv = default), bsp);
+        if (bsp.Kv.Key != default)
+            AddFile(bsp.Kv, b => b.Kv = default, bsp);
 
-        if (bsp.Txt.Key != default(string))
-            AddFile(bsp.Txt, (b => b.Txt = default), bsp);
+        if (bsp.Txt.Key != default)
+            AddFile(bsp.Txt, b => b.Txt = default, bsp);
 
-        if (bsp.Jpg.Key != default(string))
-            AddFile(bsp.Jpg, (b => b.Jpg = default), bsp);
+        if (bsp.Jpg.Key != default)
+            AddFile(bsp.Jpg, b => b.Jpg = default, bsp);
 
-        if (bsp.Radartxt.Key != default(string))
-            AddFile(bsp.Radartxt, (b => b.Radartxt = default), bsp);
+        if (bsp.Radartxt.Key != default)
+            AddFile(bsp.Radartxt, b => b.Radartxt = default, bsp);
 
-        if (bsp.RadarTablet.Key != default(string))
-            AddFile(bsp.RadarTablet, (b => b.RadarTablet = default), bsp);
+        if (bsp.RadarTablet.Key != default)
+            AddFile(bsp.RadarTablet, b => b.RadarTablet = default, bsp);
 
-        if (bsp.PanoramaMapIcon.Key != default(string))
+        if (bsp.PanoramaMapIcon.Key != default)
         {
-            AddFile(bsp.PanoramaMapIcon, (b => b.PanoramaMapIcon = default), bsp);
+            AddFile(bsp.PanoramaMapIcon, b => b.PanoramaMapIcon = default, bsp);
         }
 
-        if (bsp.ParticleManifest.Key != default(string))
+        if (bsp.ParticleManifest.Key != default)
         {
-            if (AddFile(bsp.ParticleManifest, (b => b.ParticleManifest = default), bsp))
+            if (AddFile(bsp.ParticleManifest, b => b.ParticleManifest = default, bsp))
             {
                 foreach (string particle in AssetUtils.FindManifestPcfs(bsp.ParticleManifest.Value))
                     AddParticle(particle);
             }
         }
 
-        if (bsp.Soundscape.Key != default(string))
+        if (bsp.Soundscape.Key != default)
         {
-            if (AddFile(bsp.Soundscape, (b => b.Soundscape = default), bsp))
+            if (AddFile(bsp.Soundscape, b => b.Soundscape = default, bsp))
             {
                 foreach (string sound in AssetUtils.FindSoundscapeSounds(bsp.Soundscape.Value))
                     AddSound(sound);
             }
         }
 
-        if (bsp.Soundscript.Key != default(string))
+        if (bsp.Soundscript.Key != default)
         {
-            if (AddFile(bsp.Soundscript, (b => b.Soundscript = default), bsp))
+            if (AddFile(bsp.Soundscript, b => b.Soundscript = default, bsp))
             {
                 foreach (string sound in AssetUtils.FindSoundscapeSounds(bsp.Soundscript.Value))
                     AddSound(sound);
@@ -198,10 +198,10 @@ class PakFile
 
         foreach (KeyValuePair<string, string> vehicleScript in bsp.VehicleScriptList)
             if (AddInternalFile(vehicleScript.Key, vehicleScript.Value))
-                vehiclescriptcount++;
+                VehicleScriptCount++;
         foreach (KeyValuePair<string, string> effectScript in bsp.EffectScriptList)
             if (AddInternalFile(effectScript.Key, effectScript.Value))
-                effectscriptcount++;
+                EffectScriptCount++;
         foreach (KeyValuePair<string, string> dds in bsp.Radardds)
             AddInternalFile(dds.Key, dds.Value);
         foreach (KeyValuePair<string, string> lang in bsp.Languages)
@@ -243,7 +243,7 @@ class PakFile
 
     public PakFile(List<string> sourceDirectories, List<string> includeFiles, List<string> excludedFiles, List<string> excludedDirs, List<string> excludedVpkFiles, string outputFile, bool noswvtx)
     {
-        mdlcount = vmtcount = pcfcount = soundcount = vehiclescriptcount = effectscriptcount = PanoramaMapBackgroundCount = 0;
+        MdlCount = VmtCount = PcfCount = SoundCount = VehicleScriptCount = EffectScriptCount = PanoramaMapBackgroundCount = 0;
         sourceDirs = sourceDirectories;
         fileName = outputFile;
         noSwvtx = noswvtx;
@@ -310,14 +310,14 @@ class PakFile
         string externalPath = FindExternalFile(internalPath);
         if (AddInternalFile(internalPath, externalPath))
         {
-            mdlcount++;
+            MdlCount++;
             List<string> vtxMaterialNames = [];
             foreach (string reference in AssetUtils.FindMdlRefs(internalPath))
             {
                 string ext_path = FindExternalFile(reference);
 
                 //don't pack .sw.vtx files if param is set
-                if (reference.EndsWith(".sw.vtx") && this.noSwvtx)
+                if (reference.EndsWith(".sw.vtx") && noSwvtx)
                     continue;
 
                 AddInternalFile(reference, ext_path);
@@ -366,7 +366,7 @@ class PakFile
         string externalPath = FindExternalFile(internalPath);
         if (AddInternalFile(internalPath, externalPath))
         {
-            vmtcount++;
+            VmtCount++;
             foreach (string vtf in AssetUtils.FindVmtTextures(externalPath))
                 AddInternalFile(vtf, FindExternalFile(vtf));
             foreach (string vmt in AssetUtils.FindVmtMaterials(externalPath))
@@ -387,7 +387,7 @@ class PakFile
         PCF? pcf = ParticleUtils.ReadParticle(externalPath);
         if (AddInternalFile(internalPath, externalPath) && pcf != null)
         {
-            pcfcount++;
+            PcfCount++;
             foreach (string mat in pcf.MaterialNames)
                 AddTexture(mat);
 
@@ -407,7 +407,7 @@ class PakFile
         string externalPath = FindExternalFile(internalPath);
         if (AddInternalFile(internalPath, externalPath))
         {
-            soundcount++;
+            SoundCount++;
         }
     }
 
@@ -435,7 +435,7 @@ class PakFile
             Message.Warning($"WARNING: Failed to find VScript file {internalPath}\n");
             return;
         }
-        vscriptcount++;
+        VscriptCount++;
 
         var (vscripts, models, sounds, includedFiles, includedDirectories) = AssetUtils.FindVScriptDependencies(externalPath);
         foreach (string vscript in vscripts)

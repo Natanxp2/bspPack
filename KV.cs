@@ -21,7 +21,7 @@ public static class StringUtil
             if (c == '{')
             {
                 if (i > startIndex)
-                    formatted.AppendLine(kv.Substring(startIndex, i - startIndex));
+                    formatted.AppendLine(kv[startIndex..i]);
 
                 formatted.AppendLine("{");
 
@@ -32,7 +32,7 @@ public static class StringUtil
             {
                 if (i > startIndex)
                 {
-                    var beforeCloseBraceText = kv.Substring(startIndex, i - startIndex).Trim();
+                    var beforeCloseBraceText = kv[startIndex..i].Trim();
                     if (beforeCloseBraceText != "")
                         formatted.AppendLine(beforeCloseBraceText);
                 }

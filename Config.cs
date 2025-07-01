@@ -13,7 +13,6 @@ public static class Config
 	public static string BSPZip { get; private set; } = null!;
 	public static string KeysFolder { get; private set; } = null!;
 	public static string TempFolder { get; private set; } = null!;
-	public static string CopyLocation { get; private set; } = null!;
 	public static string VPK { get; private set; } = null!;
 
 	public static void InitializeConfig()
@@ -38,7 +37,6 @@ public static class Config
 		}
 
 		TempFolder = Path.Combine(ExeDirectory, "Temp");
-		CopyLocation = Path.Combine(ExeDirectory); //Placeholder
 	}
 
 	public static void CreateDefaultResourceConfigFile(string filePath)
@@ -77,7 +75,7 @@ public static class Config
 		}
 		catch (Exception ex)
 		{
-			Message.Error($"Error creating configuration file: {ex.Message}");
+			Message.Error($"Error creating ResourceConfig.ini: {ex.Message}");
 		}
 	}
 
@@ -86,9 +84,7 @@ public static class Config
 	{
 		Console.WriteLine("Loading config.ini...");
 		if (!File.Exists(filePath))
-		{
 			CreateDefaultConfigFile(filePath);
-		}
 
 		bool configLoaded = true;
 
@@ -158,17 +154,7 @@ public static class Config
 				Message.Write($"[{i + 1}] ");
 				Message.WriteLine($"{gamePaths[i].Item1} ", ConsoleColor.Blue);
 			}
-			Message.Write("\nChoose which one to use a the base: ");
-
-			int selected = -1;
-			while (selected < 1 || selected > gamePaths.Count)
-			{
-				string? input = Console.ReadLine();
-				if (!int.TryParse(input, out selected) || selected < 1 || selected > gamePaths.Count)
-				{
-					Message.Write("Invalid selection. Please enter a valid number: ", ConsoleColor.Yellow);
-				}
-			}
+			int selected = Message.PromptInt("\nChoose which one to use as the base: ", 1, gamePaths.Count);
 			chosenGame = Path.Combine(steamPath, "steamapps", "common", gamePaths[selected - 1].Item1, gamePaths[selected - 1].Item2);
 		}
 		else
