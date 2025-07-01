@@ -706,7 +706,7 @@ static class AssetUtils
         Dictionary<string, string> worldspawn = bsp.EntityList.FirstOrDefault(item => item["classname"] == "worldspawn", []);
         if (worldspawn.TryGetValue("detailvbsp", out var detailvbsp))
         {
-            internalPath = detailvbsp;
+            internalPath = detailvbsp.ToLower();
 
             foreach (string source in sourceDirectories)
             {

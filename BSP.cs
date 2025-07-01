@@ -169,13 +169,10 @@ class BSP
 
         TextureList = [];
         bsp.Seek(Offsets[43].Key, SeekOrigin.Begin);
-        TextureList = new List<string>(Encoding.ASCII.GetString(reader.ReadBytes(Offsets[43].Value)).Split('\0'));
+        TextureList = [.. Encoding.ASCII.GetString(reader.ReadBytes(Offsets[43].Value)).Split('\0')];
         for (int i = 0; i < TextureList.Count; i++)
         {
             if (TextureList[i].StartsWith('/')) // materials in root level material directory start with /
-
-                //For some reason some texture names are converted to upper case in the bsp. 
-                //Since linux pathnames are case sensitive the only solution I found so far is to normalize them to lower case 
                 TextureList[i] = "materials" + TextureList[i].ToLower() + ".vmt";
             else
                 TextureList[i] = "materials/" + TextureList[i].ToLower() + ".vmt";
@@ -191,15 +188,21 @@ class BSP
         // find skybox materials
         Dictionary<string, string> worldspawn = EntityList.FirstOrDefault(item => item["classname"] == "worldspawn", []);
         if (worldspawn.TryGetValue("skyname", out string? skyname))
+        {
+            skyname = skyname.ToLower();
             foreach (string s in new string[] { "", "bk", "dn", "ft", "lf", "rt", "up" })
             {
                 TextureList.Add("materials/skybox/" + skyname + s + ".vmt");
                 TextureList.Add("materials/skybox/" + skyname + "_hdr" + s + ".vmt");
             }
+        }
 
         // find detail materials
         if (worldspawn.TryGetValue("detailmaterial", out string? detailmaterial))
+        {
+            detailmaterial = detailmaterial.ToLower();
             TextureList.Add("materials/" + detailmaterial + ".vmt");
+        }
 
         // find menu photos
         TextureList.Add("materials/vgui/maps/menu_photos_" + mapname + ".vmt");
@@ -227,6 +230,7 @@ class BSP
 
             if (ent["classname"].Contains("skybox_swapper") && ent.TryGetValue("SkyboxName", out string? skyboxname))
             {
+                skyboxname = skyboxname.ToLower();
                 if (ent.TryGetValue("targetname", out string? targetname))
                     skybox_swappers.Add(targetname.ToLower());
 
