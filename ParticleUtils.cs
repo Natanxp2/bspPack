@@ -105,6 +105,7 @@ public static class ParticleUtils
 
         //Read element dict for particle names
         int numElements = reader.ReadInt32();
+
         for (int i = 0; i < numElements; i++)
         {
             int typeNameIndex;
@@ -120,38 +121,29 @@ public static class ParticleUtils
             if (pcf.BinaryVersion != 4 && pcf.BinaryVersion != 5)
             {
                 elementName = ReadNullTerminatedString(fs, reader);
-                //Skip data signature
-                fs.Seek(16, SeekOrigin.Current);
             }
             else if (pcf.BinaryVersion == 4)
             {
                 int elementNameIndex = reader.ReadUInt16();
                 elementName = pcf.StringDict[elementNameIndex];
-                fs.Seek(16, SeekOrigin.Current);
             }
             else if (pcf.BinaryVersion == 5)
             {
                 int elementNameIndex = (int)reader.ReadUInt32();
                 elementName = pcf.StringDict[elementNameIndex];
-                fs.Seek(16, SeekOrigin.Current);
             }
+
+            // Skip data signature
+            fs.Seek(16, SeekOrigin.Current);
 
             //Get particle names
             if (typeName == "DmeParticleSystemDefinition")
                 pcf.ParticleNames.Add(elementName);
         }
 
-        bool containsParticle = false;
-        foreach (string particleName in pcf.ParticleNames)
-        {
-            foreach (string targetParticle in targetParticles)
-            {
-                if (particleName == targetParticle)
-                {
-                    containsParticle = true;
-                }
-            }
-        }
+        bool containsParticle = pcf.ParticleNames
+                                .Intersect(targetParticles, StringComparer.OrdinalIgnoreCase)
+                                .Any();
 
         //If target particle is not in pcf dont read it
         reader.Close();
@@ -214,7 +206,12 @@ public static class ParticleUtils
         int numElements = reader.ReadInt32();
         for (int i = 0; i < numElements; i++)
         {
-            int typeNameIndex = reader.ReadUInt16();
+            int typeNameIndex;
+            if (pcf.BinaryVersion == 5)
+                typeNameIndex = (int)reader.ReadUInt32();
+            else
+                typeNameIndex = reader.ReadUInt16();
+
             string typeName = pcf.StringDict[typeNameIndex];
 
             string elementName = "";
@@ -222,21 +219,20 @@ public static class ParticleUtils
             if (pcf.BinaryVersion != 4 && pcf.BinaryVersion != 5)
             {
                 elementName = ReadNullTerminatedString(fs, reader);
-                //Skip data signature
-                fs.Seek(16, SeekOrigin.Current);
             }
             else if (pcf.BinaryVersion == 4)
             {
                 int elementNameIndex = reader.ReadUInt16();
                 elementName = pcf.StringDict[elementNameIndex];
-                fs.Seek(16, SeekOrigin.Current);
             }
             else if (pcf.BinaryVersion == 5)
             {
-                int elementNameIndex = reader.ReadUInt16();
+                int elementNameIndex = (int)reader.ReadUInt32();
                 elementName = pcf.StringDict[elementNameIndex];
-                fs.Seek(20, SeekOrigin.Current);
             }
+
+            //Skip data signature
+            fs.Seek(16, SeekOrigin.Current);
 
             //Get particle names
             if (typeName == "DmeParticleSystemDefinition")
@@ -337,7 +333,7 @@ class ParticleManifest
 
     public ParticleManifest(List<string> sourceDirectories, List<string> ignoreDirectories, List<string> excludedFiles, BSP map, string bspPath, string gameFolder)
     {
-        Console.WriteLine($"\nGenerating Particle Manifest...");
+        Console.WriteLine($"Generating Particle Manifest...");
 
         baseDirectory = gameFolder + "/";
 
@@ -443,7 +439,8 @@ class ParticleManifest
                         string internalParticlePath = particle.FilePath[(source.Length + 1)..];
 
                         sw.WriteLine($"      \"file\"    \"!{internalParticlePath}\"");
-                        Console.WriteLine($"PCF added to manifest: {internalParticlePath}");
+                        Message.Write($"PCF added to manifest: ");
+                        Message.Info(internalParticlePath);
                     }
                 }
             }
