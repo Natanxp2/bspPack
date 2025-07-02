@@ -360,7 +360,7 @@ static class AssetUtils
 
                         for (int j = 0; j < entry.Length; j++)
                             if (entry[j].Equals("\"model\"") || entry[j].Equals("\"ragdoll\""))
-                                models.Add("models{Path.DirectorySeparatorChar}" + entry[j + 1].Trim('"') + (entry[j + 1].Trim('"').EndsWith(".mdl") ? "" : ".mdl"));
+                                models.Add($"models{Path.DirectorySeparatorChar}" + entry[j + 1].Trim('"') + (entry[j + 1].Trim('"').EndsWith(".mdl") ? "" : ".mdl"));
                     }
                 }
             }
@@ -624,7 +624,7 @@ static class AssetUtils
                 else if (cleanStatement.Contains("PrecacheModel"))
                 {
                     // pack precached models
-                    includedSounds.Add(functionParameters[0].Replace("\"", "").Trim());
+                    includedModels.Add(functionParameters[0].Replace("\"", "").Trim());
                 }
                 else if (cleanStatement.Contains("PrecacheSound"))
                 {
@@ -645,7 +645,37 @@ static class AssetUtils
         }
 
         return (includedScripts, includedModels, includedSounds, includedFiles, includedDirectories);
+    }
 
+    public static Dictionary<string, string> VscriptTableToDict(string input)
+    {
+        var dict = new Dictionary<string, string>();
+
+        // Remove outer braces
+        input = input.Trim('{', '}');
+
+        // Match either backtick-quoted key with : or unquoted key with =
+        var matches = Regex.Matches(input, @"(?:`([^`]+)`\s*:\s*(?:`([^`]+)`|([^,}\s]+))|([^,}\s]+)\s*=\s*(?:`([^`]+)`|([^,}\s]+)))");
+
+        foreach (Match match in matches)
+        {
+            string key, value;
+
+            if (match.Groups[1].Success)  // Backtick-quoted key
+            {
+                key = match.Groups[1].Value;
+                value = match.Groups[2].Success ? match.Groups[2].Value : match.Groups[3].Value;
+            }
+            else  // Unquoted key
+            {
+                key = match.Groups[4].Value;
+                value = match.Groups[5].Success ? match.Groups[5].Value : match.Groups[6].Value;
+            }
+
+            dict[key.Trim()] = value.Trim();
+        }
+
+        return dict;
     }
 
     public static void FindBspUtilityFiles(BSP bsp, List<string> sourceDirectories, bool renamenav, bool genparticlemanifest)
@@ -675,7 +705,8 @@ static class AssetUtils
         }
 
         // Soundscript file
-        internalPath = "maps/" + bsp.File.Name.Replace(".bsp", "") + "_level_sounds.txt";
+        // TF2 MvM maps use a special script file instead.
+        internalPath = !bsp.File.Name.StartsWith("mvm_") ? "maps/" + bsp.File.Name.Replace(".bsp", "") + "_level_sounds.txt" : "scripts/mvm_level_sound_tweaks.txt";
         foreach (string source in sourceDirectories)
         {
             string externalPath = source + "/" + internalPath;
@@ -951,19 +982,33 @@ static class AssetUtils
         }
         bsp.Languages = langfiles;
 
-        // ASW/Source2009 branch VScripts
+        // VScripts
         List<string> vscripts = [];
-
-        foreach (Dictionary<string, string> entity in bsp.EntityList)
+        foreach (var entity in bsp.EntityListArrayForm)
         {
-            foreach (KeyValuePair<string, string> kvp in entity)
+            foreach (var prop in entity)
             {
-                if (kvp.Key.Equals("vscripts", StringComparison.CurrentCultureIgnoreCase))
+                if (prop.Item1.ToLower() == "vscripts")
+                    vscripts.AddRange([.. prop.Item2.Split(' ', StringSplitOptions.TrimEntries).Select(x => $"scripts/vscripts/{x}")]);
+
+                var io = bsp.ParseIO(prop.Item2);
+
+                if (io == null) continue;
+
+                var (target, command, parameter, scriptArgs) = io;
+
+                if (command.ToLower() == "runscriptfile")
+                    vscripts.Add($"scripts/vscripts/{parameter}");
+
+                else if (scriptArgs.Length != 0)
                 {
-                    string[] scripts = kvp.Value.Split(' ');
-                    foreach (string script in scripts)
+                    for (int i = 0; i < scriptArgs.Length; i++)
                     {
-                        vscripts.Add("scripts/vscripts/" + script);
+                        string arg = scriptArgs.ElementAtOrDefault(i + 1)!;
+
+                        //EndsWith for DoIncludeScript
+                        if (scriptArgs[i].EndsWith("IncludeScript") && arg != default)
+                            vscripts.Add($"scripts/vscripts/{arg}");
                     }
                 }
             }
@@ -1278,6 +1323,12 @@ static class AssetUtils
         return values;
     }
 
+    /// <summary>
+    /// Recursively searches KV for specified keys, case insensitive
+    /// </summary>
+    /// <param name="kv"></param>
+    /// <param name="keys"></param>
+    /// <returns></returns>
     private static List<KVObject> FindKVKeys(KVObject kv, List<string> keys)
     {
         var values = new List<KVObject>();
