@@ -27,7 +27,9 @@ public class PCF
         {
             if (s.EndsWith(".mdl"))
             {
-                modelList.Add(s);
+                //According this issue this should be prepended with /materials.
+                //https://github.com/ruarai/CompilePal/issues/143
+                modelList.Add("models/" + s);
             }
         }
         ModelNames = modelList;
