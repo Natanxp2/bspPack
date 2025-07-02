@@ -95,13 +95,9 @@ public static class ParticleUtils
 
         //Different versions have different stringDict sizes
         if (pcf.BinaryVersion != 4 && pcf.BinaryVersion != 5)
-        {
             pcf.NumDictStrings = reader.ReadInt16(); //Read as short
-        }
         else
-        {
             pcf.NumDictStrings = reader.ReadInt32(); //Read as int
-        }
 
         //Add strings to string dict
         for (int i = 0; i < pcf.NumDictStrings; i++)
@@ -111,7 +107,12 @@ public static class ParticleUtils
         int numElements = reader.ReadInt32();
         for (int i = 0; i < numElements; i++)
         {
-            int typeNameIndex = reader.ReadUInt16();
+            int typeNameIndex;
+            if (pcf.BinaryVersion == 5)
+                typeNameIndex = (int)reader.ReadUInt32();
+            else
+                typeNameIndex = reader.ReadUInt16();
+
             string typeName = pcf.StringDict[typeNameIndex];
 
             string elementName = "";
@@ -130,15 +131,14 @@ public static class ParticleUtils
             }
             else if (pcf.BinaryVersion == 5)
             {
-                int elementNameIndex = reader.ReadUInt16();
+                int elementNameIndex = (int)reader.ReadUInt32();
                 elementName = pcf.StringDict[elementNameIndex];
-                fs.Seek(20, SeekOrigin.Current);
+                fs.Seek(16, SeekOrigin.Current);
             }
 
             //Get particle names
             if (typeName == "DmeParticleSystemDefinition")
                 pcf.ParticleNames.Add(elementName);
-
         }
 
         bool containsParticle = false;
