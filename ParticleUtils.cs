@@ -366,8 +366,9 @@ class ParticleManifest
                 continue;
 
             foreach (string file in Directory.GetFiles(dir))
-            {
-                if (file.EndsWith(".pcf") && !excludedFiles.Contains(file.ToLower()))
+            {   
+                //Ignore case bad on linux? Could cause problems
+                if (file.EndsWith(".pcf") && !excludedFiles.Any(f => string.Equals(f, file, StringComparison.InvariantCultureIgnoreCase)))
                 {
                     PCF? pcf = ParticleUtils.IsTargetParticle(file, map.ParticleList);
                     if (pcf != null && !particles.Exists(p => p.FilePath == pcf.FilePath))
