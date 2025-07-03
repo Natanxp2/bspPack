@@ -46,13 +46,7 @@ public class PCF
         {
 
             if (s.EndsWith(".vmt") || s.EndsWith(".vtf"))
-            {
-                // Alien Swarm does not prepend materials/ to particles, add it just in case
-                if (BinaryVersion == 5 && PcfVersion == 2)
-                    materialNames.Add("materials/" + s);
-
-                materialNames.Add(s);
-            }
+                materialNames.Add(Path.Combine("materials" + s));
         }
         return materialNames;
     }
