@@ -33,17 +33,17 @@ partial class BSPPack
 
 	static void Main(string[] args)
 	{
-		verbose = args.Contains("-V") || args.Contains("--verbose");
-		dryrun = args.Contains("-D") || args.Contains("--dryrun");
-		renamenav = args.Contains("-R") || args.Contains("--renamenav");
-		noswvtx = args.Contains("-N") || args.Contains("--noswvtx");
-		particlemanifest = args.Contains("-P") || args.Contains("--particlemanifest");
-		compress = args.Contains("-C") || args.Contains("--compress");
-		unpack = args.Contains("-U") || args.Contains("--unpack");
-		modify = args.Contains("-M") || args.Contains("--modify");
-		search = args.Contains("-S") || args.Contains("--search");
-		lowercase = args.Contains("-L") || args.Contains("--lowercase");
-		vpk = args.Contains("-VPK") || args.Contains("--packvpk");
+		verbose = 		   args.Contains("-V")   || args.Contains("--verbose");
+		dryrun = 		   args.Contains("-D")   || args.Contains("--dryrun");
+		renamenav = 	   args.Contains("-R")   || args.Contains("--renamenav");
+		noswvtx = 		   args.Contains("-N")   || args.Contains("--noswvtx");
+		particlemanifest = args.Contains("-P")   || args.Contains("--particlemanifest");
+		compress = 		   args.Contains("-C")   || args.Contains("--compress");
+		unpack = 		   args.Contains("-U")   || args.Contains("--unpack");
+		modify = 		   args.Contains("-M")   || args.Contains("--modify");
+		search = 		   args.Contains("-S")   || args.Contains("--search");
+		lowercase = 	   args.Contains("-L")   || args.Contains("--lowercase");
+		vpk = 			   args.Contains("-VPK") || args.Contains("--packvpk");
 
 		Config.LoadConfig(Path.Combine(Config.ExeDirectory, "config.ini"));
 
@@ -68,6 +68,7 @@ Provide a path to a vpk path to unpack it.
 			Console.WriteLine(helpMessage);
 			return;
 		}
+		
 		if (lowercase)
 			LowercaseAssets();
 
@@ -101,9 +102,6 @@ Provide a path to a vpk path to unpack it.
 		if (modify)
 			LoadPathsFromResourceConfig(Path.Combine(Config.ExeDirectory, "ResourceConfig.ini"));
 
-		if (includeDirs.Count != 0)
-			GetFilesFromIncludedDirs();
-
 		Console.WriteLine("\nLooking for search paths...");
 		sourceDirectories = AssetUtils.GetSourceDirectories(Config.GameFolder);
 
@@ -116,7 +114,7 @@ Provide a path to a vpk path to unpack it.
 					? GlobOptions.CaseInsensitive
 					: GlobOptions.None;
 
-				var globResults = Glob.Directories(root, dir.Substring(root.Length), globOptions);
+				var globResults = Glob.Directories(root, dir[root.Length..], globOptions);
 				if (!globResults.Any())
 				{
 					Message.Warning($"WARNING: Found no matching folders for: {dir}\n");
@@ -332,11 +330,14 @@ Provide a path to a vpk path to unpack it.
 			}
 		}
 
+		if (includeDirs.Count != 0)
+			GetFilesFromIncludedDirs();
+
 		if (excludeVpks.Count != 0)
 		{
 			foreach (string vpk in excludeVpks)
 				excludeVpkFiles.AddRange(GetVPKFileList(vpk));
-		}
+		}	
 	}
 
 	static void GetFilesFromIncludedDirs()

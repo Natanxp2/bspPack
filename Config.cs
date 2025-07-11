@@ -32,7 +32,7 @@ public static class Config
 
 		if (!Directory.Exists(KeysFolder))
 		{
-			Message.Error($"Keys folder doesn't exist in {ExeDirectory}!");
+			Message.Error($"Keys folder doesn't exist in {ExeDirectory}");
 			Environment.Exit(1);
 		}
 
@@ -78,7 +78,6 @@ public static class Config
 			Message.Error($"Error creating ResourceConfig.ini: {ex.Message}");
 		}
 	}
-
 
 	public static void LoadConfig(string filePath)
 	{
