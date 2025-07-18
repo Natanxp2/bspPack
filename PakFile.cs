@@ -9,7 +9,7 @@ class PakFile
 
     // the dictionary is formated as <internalPath, externalPath>
     // matching the bspzip specification https://developer.valvesoftware.com/wiki/BSPZIP
-    private readonly IDictionary<string, string> Files;
+    public readonly IDictionary<string, string> Files;
 
     private bool AddFile(string internalPath, string externalPath)
     {

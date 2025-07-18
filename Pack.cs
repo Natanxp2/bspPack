@@ -33,17 +33,17 @@ partial class BSPPack
 
 	static void Main(string[] args)
 	{
-		verbose = 		   args.Contains("-V")   || args.Contains("--verbose");
-		dryrun = 		   args.Contains("-D")   || args.Contains("--dryrun");
-		renamenav = 	   args.Contains("-R")   || args.Contains("--renamenav");
-		noswvtx = 		   args.Contains("-N")   || args.Contains("--noswvtx");
-		particlemanifest = args.Contains("-P")   || args.Contains("--particlemanifest");
-		compress = 		   args.Contains("-C")   || args.Contains("--compress");
-		unpack = 		   args.Contains("-U")   || args.Contains("--unpack");
-		modify = 		   args.Contains("-M")   || args.Contains("--modify");
-		search = 		   args.Contains("-S")   || args.Contains("--search");
-		lowercase = 	   args.Contains("-L")   || args.Contains("--lowercase");
-		vpk = 			   args.Contains("-VPK") || args.Contains("--packvpk");
+		verbose = args.Contains("-V") || args.Contains("--verbose");
+		dryrun = args.Contains("-D") || args.Contains("--dryrun");
+		renamenav = args.Contains("-R") || args.Contains("--renamenav");
+		noswvtx = args.Contains("-N") || args.Contains("--noswvtx");
+		particlemanifest = args.Contains("-P") || args.Contains("--particlemanifest");
+		compress = args.Contains("-C") || args.Contains("--compress");
+		unpack = args.Contains("-U") || args.Contains("--unpack");
+		modify = args.Contains("-M") || args.Contains("--modify");
+		search = args.Contains("-S") || args.Contains("--search");
+		lowercase = args.Contains("-L") || args.Contains("--lowercase");
+		vpk = args.Contains("-VPK") || args.Contains("--packvpk");
 
 		Config.LoadConfig(Path.Combine(Config.ExeDirectory, "config.ini"));
 
@@ -68,7 +68,7 @@ Provide a path to a vpk path to unpack it.
 			Console.WriteLine(helpMessage);
 			return;
 		}
-		
+
 		if (lowercase)
 			LowercaseAssets();
 
@@ -203,12 +203,14 @@ Provide a path to a vpk path to unpack it.
 		}
 
 		Console.WriteLine("Running bspzip...");
-		PackBSP(outputFile);
+		//PackBSP(outputFile);
+		LumpManager.PackBSP(pakfile.Files);
 
 		if (compress)
 		{
 			Console.WriteLine("Compressing BSP...");
-			CompressBSP();
+			//CompressBSP();
+			LumpManager.CompressBSP();
 		}
 
 		DeleteTempFiles();
@@ -337,7 +339,7 @@ Provide a path to a vpk path to unpack it.
 		{
 			foreach (string vpk in excludeVpks)
 				excludeVpkFiles.AddRange(GetVPKFileList(vpk));
-		}	
+		}
 	}
 
 	static void GetFilesFromIncludedDirs()
