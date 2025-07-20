@@ -1,355 +1,225 @@
-using System.Reflection.Metadata;
 using System.Text;
-using static System.IO.Hashing.Crc32;
 
 namespace bspPack;
 
-public class LumpManager
+public partial class LumpManager
 {
-    readonly static int LZMA_ID = ('A' << 24) | ('M' << 16) | ('Z' << 8) | ('L');
+    const int BSP_ID = ('P' << 24) + ('S' << 16) + ('B' << 8) + 'V';
+    const byte GAMELUMP_INDEX = 35;
+    const byte PAKFILE_INDEX = 40;
+    const byte VERSION_NEEDED_TO_EXTRACT = 63;
+    const byte COMPRESSION_METHOD = 14;
+    const int PAKFILE_LUMP_OFFSET = 8 + (PAKFILE_INDEX * LUMP.Size);
+
     readonly static List<ZIP_FileHeader> CentralDir = [];
     readonly static HashSet<string> PackedAssets = [];
     static ZIP_EndOfCentralDirRecord? EOCD;
 
-    public static void PackBSP(IDictionary<string, string> pakfile)
+    public static void PackBSP(IDictionary<string, string> pakfile, bool compress)
     {
-        int PAKFILE_LUMP_OFFSET = 8 + (40 * 16);
-        string tempBsp = Config.BSPFile[..^4] + "_backup.bsp";
-        File.Copy(Config.BSPFile, tempBsp, overwrite: true);
+        using var fs = new FileStream(Config.BSPFile, FileMode.Open, FileAccess.ReadWrite);
+        using var reader = new BinaryReader(fs);
 
-        using (var fs = new FileStream(tempBsp, FileMode.Open, FileAccess.ReadWrite))
-        using (var reader = new BinaryReader(fs))
-        using (var writer = new BinaryWriter(fs))
+        GetEOCD(fs, reader);
+
+        fs.Seek(PAKFILE_LUMP_OFFSET, SeekOrigin.Begin);
+        uint pakfileOffset = reader.ReadUInt32();
+
+        fs.Seek(pakfileOffset + EOCD!.startOfCentralDirOffset, SeekOrigin.Begin);
+        for (int i = 0; i < EOCD.nCentralDirectoryEntries_Total; i++)
         {
-            //Check the ID of first lump header for compression signature
-            fs.Seek(8, SeekOrigin.Begin);
-            if (reader.ReadInt32() == LZMA_ID)
-            {
-                Message.Error("File is compressed. Exiting");
-                Environment.Exit(1);
-            }
+            var centralDirHeader = new ZIP_FileHeader(reader);
+            PackedAssets.Add(Encoding.ASCII.GetString(centralDirHeader.fileName!));
+            CentralDir.Add(centralDirHeader);
+        }
 
-            //Get pakfile Offset
-            fs.Seek(PAKFILE_LUMP_OFFSET, SeekOrigin.Begin);
-            uint pakfileOffset = reader.ReadUInt32();
+        if (compress)
+        {
+            var (outputStream, outputPakfileOffset) = CompressBSP(fs, pakfileOffset);
+            AppendPakfile(pakfile, (uint)outputPakfileOffset, outputStream, compress);
+        }
+        else
+            AppendPakfile(pakfile, pakfileOffset, fs, compress: false);
 
-            //Store EOCD and centralDir array before packing
-            long eocdOffset = FindEOCDOffset(fs);
+    }
+    public static void AppendPakfile(IDictionary<string, string> pakfile, uint pakfileOffset, FileStream fs, bool compress)
+    {
+        using var writer = new BinaryWriter(fs);
 
-            fs.Seek(eocdOffset, SeekOrigin.Begin);
-            EOCD = new ZIP_EndOfCentralDirRecord(reader);
-
-            fs.Seek(pakfileOffset + EOCD.startOfCentralDirOffset, SeekOrigin.Begin);
-            for (int i = 0; i < EOCD.nCentralDirectoryEntries_Total; i++)
-            {
-                var centralDirHeader = new ZIP_FileHeader(reader);
-                PackedAssets.Add(Encoding.ASCII.GetString(centralDirHeader.fileName!));
-                CentralDir.Add(centralDirHeader);
-            }
-
-            //Strip centralDir and EOCD to prepare for appending
-            fs.SetLength(pakfileOffset + EOCD.startOfCentralDirOffset);
+        //Strip centralDir and EOCD to prepare for appending
+        if (!compress)
+        {
+            fs.SetLength(pakfileOffset + EOCD!.startOfCentralDirOffset);
             fs.Seek(0, SeekOrigin.End);
+        }
 
+        uint pakfileLength = (uint)fs.Position - pakfileOffset;
 
-            uint pakfileLength = (uint)fs.Position - pakfileOffset;
+        //Append new localHeaders and fileData
+        foreach (var filepath in pakfile) // .Key = internal | .Value = external
+        {
+            if (PackedAssets.Contains(filepath.Key)) continue;
 
-            //Append new localHeaders and fileData
-            foreach (var filepath in pakfile) // .Key = internal | .Value = external
+            uint localHeaderOffset = (uint)(fs.Position - pakfileOffset);
+            byte[] fileData = File.ReadAllBytes(filepath.Value);
+            var localheader = new ZIP_LocalFileHeader(fileData, filepath.Key);
+
+            localheader.Write(writer);
+            if (compress)
             {
-                if (PackedAssets.Contains(filepath.Key)) continue;
-
-                ReadOnlySpan<byte> fileData = File.ReadAllBytes(filepath.Value);
-                var localheader = new ZIP_LocalFileHeader(fileData, filepath.Key);
-                CentralDir.Add(new ZIP_FileHeader(localheader, (uint)fs.Position - pakfileOffset));
-
-                localheader.Write(writer);
+                using var fileStream = new MemoryStream(fileData);
+                localheader.compressedSize = CompressLZMA(fileStream, fs, 0, IsPakfile: true);
+                localheader.versionNeededToExtract = VERSION_NEEDED_TO_EXTRACT;
+                localheader.compressionMethod = COMPRESSION_METHOD;
+            }
+            else
                 writer.Write(fileData);
 
-                pakfileLength += localheader.Size + (uint)fileData.Length;
-            }
-
-            //Patch part of EOCD
-            EOCD.startOfCentralDirOffset = (uint)fs.Position - pakfileOffset;
-            EOCD.nCentralDirectoryEntries_ThisDisk = (ushort)CentralDir.Count;
-            EOCD.nCentralDirectoryEntries_Total = (ushort)CentralDir.Count;
-
-            //Append new CentralDir
-            uint centralDirSize = 0;
-            foreach (var header in CentralDir)
-            {
-                centralDirSize += header.Size;
-                header.Write(writer);
-            }
-
-            pakfileLength += centralDirSize;
-
-            //Finish patching EOCD and append
-            EOCD.centralDirectorySize = centralDirSize;
-            EOCD.Write(writer);
-
-            //Pad to 4 bytes
-            int padding = (int)(4 - (fs.Position % 4)) % 4;
-            if (padding > 0)
-                writer.Write(new byte[padding]);
-
-            //Patch pakfileLenght in lump 40 header
-            pakfileLength += EOCD.Size;
-            fs.Seek(PAKFILE_LUMP_OFFSET + 4, SeekOrigin.Begin);
-            writer.Write(pakfileLength);
+            CentralDir.Add(new ZIP_FileHeader(localheader, localHeaderOffset));
+            pakfileLength += localheader.Size + localheader.compressedSize;
         }
-    }
 
-    static long FindEOCDOffset(FileStream fs)
-    {
-        const int maxSearch = 0xFFFF + 22;
-        byte[] buffer = new byte[maxSearch];
-        fs.Seek(-Math.Min(maxSearch, fs.Length), SeekOrigin.End);
-        fs.ReadExactly(buffer);
+        //Patch part of EOCD
+        EOCD!.startOfCentralDirOffset = (uint)fs.Position - pakfileOffset;
+        EOCD.nCentralDirectoryEntries_ThisDisk = (ushort)CentralDir.Count;
+        EOCD.nCentralDirectoryEntries_Total = (ushort)CentralDir.Count;
 
-        for (int i = buffer.Length - 22; i >= 0; i--)
+        //Append new CentralDir
+        uint centralDirSize = 0;
+        foreach (var header in CentralDir)
         {
-            if (buffer[i] == 0x50 && buffer[i + 1] == 0x4B && buffer[i + 2] == 0x05 && buffer[i + 3] == 0x06)
-                return fs.Length - buffer.Length + i;
+            centralDirSize += header.Size;
+            header.Write(writer);
         }
 
-        throw new Exception("EOCD not found");
+        pakfileLength += centralDirSize;
+
+        //Finish patching EOCD and append
+        EOCD.centralDirectorySize = centralDirSize;
+        EOCD.Write(writer);
+        PadTo4Bytes(fs, writer);
+
+        //Patch offset and length in lump 40 header
+        pakfileLength += EOCD.Size;
+        fs.Seek(PAKFILE_LUMP_OFFSET, SeekOrigin.Begin);
+        writer.Write(pakfileOffset);
+        writer.Write(pakfileLength);
+    }
+
+    public static (FileStream outputStream, long outputPakfileOffset) CompressBSP(FileStream inputStream, uint inputPakfileOffset)
+    {
+        string tempBsp = Config.BSPFile[..^4] + $"_{Guid.NewGuid()}.bsp";
+        LUMP[] lumps = new LUMP[64];
+
+        FileStream outputStream = File.Create(tempBsp);
+
+        using BinaryReader reader = new(inputStream);
+        using BinaryWriter writer = new(outputStream, Encoding.UTF8, leaveOpen: true);
+
+        inputStream.Seek(4, SeekOrigin.Begin);
+        uint bspVersion = reader.ReadUInt32();
+
+        for (int i = 0; i < 64; i++)
+            lumps[i] = new LUMP(reader);
+
+        uint mapRevision = reader.ReadUInt32();
+
+        //Write BSP header with dummy lump headers
+        writer.Write(BSP_ID);
+        writer.Write(bspVersion);
+        outputStream.Seek(LUMP.Size * 64, SeekOrigin.Current);
+        writer.Write(mapRevision);
+
+        //Write compressed data with LZMA headers
+        for (int j = 0; j < lumps.Length; j++)
+        {
+            if (lumps[j].filelen == 0)
+            {
+                lumps[j].fileofs = 0;
+                continue;
+            }
+            if (j == GAMELUMP_INDEX || j == PAKFILE_INDEX) continue;
+
+            PadTo4Bytes(outputStream, writer);
+
+            inputStream.Seek(lumps[j].fileofs, SeekOrigin.Begin);
+            lumps[j].fileofs = (uint)outputStream.Position;
+
+            outputStream.Seek(LZMA_HEADER.Size, SeekOrigin.Current);
+            uint lzmaSize = CompressLZMA(inputStream, outputStream, lumps[j].filelen);
+
+            outputStream.Seek(lumps[j].fileofs, SeekOrigin.Begin);
+            new LZMA_HEADER(lumps[j].filelen, lzmaSize).Write(writer);
+            outputStream.Seek(0, SeekOrigin.End);
+
+            lumps[j].fourCC = BitConverter.GetBytes(lumps[j].filelen);
+            lumps[j].filelen = LZMA_HEADER.Size + lzmaSize;
+        }
+
+        //Store GameLumps
+        inputStream.Seek(lumps[GAMELUMP_INDEX].fileofs, SeekOrigin.Begin);
+        lumps[GAMELUMP_INDEX].fileofs = (uint)outputStream.Position;
+        uint gameLumpCount = reader.ReadUInt32();
+
+        DGAMELUMP[] gameLumps = new DGAMELUMP[gameLumpCount];
+        for (int k = 0; k < gameLumpCount; k++)
+            gameLumps[k] = new DGAMELUMP(reader);
+
+        //When compressed last dGameLump needs to be a dummy structure; creates one more than read
+        writer.Write(gameLumpCount + 1);
+        outputStream.Seek(DGAMELUMP.Size * (gameLumpCount + 1), SeekOrigin.Current);
+
+        //Compress GameLumps
+        foreach (DGAMELUMP gameLump in gameLumps)
+        {
+            PadTo4Bytes(outputStream, writer);
+
+            inputStream.Seek(gameLump.fileofs, SeekOrigin.Begin);
+            gameLump.fileofs = (uint)outputStream.Position;
+
+            outputStream.Seek(LZMA_HEADER.Size, SeekOrigin.Current);
+            uint lzmaSize = CompressLZMA(inputStream, outputStream, gameLump.filelen);
+
+            //Patch LZMA header
+            outputStream.Seek(gameLump.fileofs, SeekOrigin.Begin);
+            new LZMA_HEADER(gameLump.filelen, lzmaSize).Write(writer);
+            outputStream.Seek(0, SeekOrigin.End);
+
+            gameLump.flags = 1;
+        }
+
+        //Compress pakfile Lump
+        long outputPakfileOffset = outputStream.Position;
+        foreach (var header in CentralDir)
+        {
+            inputStream.Seek(inputPakfileOffset + header.relativeOffsetOfLocalHeader, SeekOrigin.Begin);
+            ZIP_LocalFileHeader localHeader = new(reader);
+
+            header.relativeOffsetOfLocalHeader = (uint)(outputStream.Position - outputPakfileOffset);
+
+            outputStream.Seek(localHeader.Size, SeekOrigin.Current);
+
+            localHeader.compressedSize = header.compressedSize = CompressLZMA(inputStream, outputStream, header.uncompressedSize, IsPakfile: true);
+            localHeader.versionNeededToExtract = header.versionNeededToExtract = VERSION_NEEDED_TO_EXTRACT;
+            localHeader.compressionMethod = header.compressionMethod = COMPRESSION_METHOD;
+
+            outputStream.Seek(outputPakfileOffset + header.relativeOffsetOfLocalHeader, SeekOrigin.Begin);
+            localHeader.Write(writer);
+
+            outputStream.Seek(0, SeekOrigin.End);
+        }
+
+        //Patch BSP lump headers
+        outputStream.Seek(8, SeekOrigin.Begin);
+        foreach (LUMP lump in lumps)
+            lump.Write(writer);
+
+        //Patch GameLump headers
+        outputStream.Seek(lumps[GAMELUMP_INDEX].fileofs + 4, SeekOrigin.Begin);
+        foreach (DGAMELUMP gameLump in gameLumps)
+            gameLump.Write(writer);
+
+        outputStream.Seek(0, SeekOrigin.End);
+        return (outputStream, outputPakfileOffset);
     }
 }
-class ZIP_EndOfCentralDirRecord
-{
-    public uint signature; //PK56
-    public ushort numberOfThisDisk;
-    public ushort numberOfTheDiskWithStartOfCentralDirectory;
-    public ushort nCentralDirectoryEntries_ThisDisk;
-    public ushort nCentralDirectoryEntries_Total;
-    public uint centralDirectorySize;
-    public uint startOfCentralDirOffset; //Relative to pakfile lump offset
-    public ushort commentLength;
-    public byte[] comment;
-
-    //Helper
-    public uint Size => (uint)(22 + commentLength);
-
-    public ZIP_EndOfCentralDirRecord(BinaryReader reader)
-    {
-        signature = reader.ReadUInt32();
-        numberOfThisDisk = reader.ReadUInt16();
-        numberOfTheDiskWithStartOfCentralDirectory = reader.ReadUInt16();
-        nCentralDirectoryEntries_ThisDisk = reader.ReadUInt16();
-        nCentralDirectoryEntries_Total = reader.ReadUInt16();
-        centralDirectorySize = reader.ReadUInt32();
-        startOfCentralDirOffset = reader.ReadUInt32();
-        commentLength = reader.ReadUInt16();
-        comment = reader.ReadBytes(commentLength);
-    }
-
-    public void Write(BinaryWriter writer)
-    {
-        writer.Write(signature);
-        writer.Write(numberOfThisDisk);
-        writer.Write(numberOfTheDiskWithStartOfCentralDirectory);
-        writer.Write(nCentralDirectoryEntries_ThisDisk);
-        writer.Write(nCentralDirectoryEntries_Total);
-        writer.Write(centralDirectorySize);
-        writer.Write(startOfCentralDirOffset);
-        writer.Write(commentLength);
-        writer.Write(comment);
-    }
-    // public override string ToString()
-    // {
-    //     string s = "";
-    //     s += $"signature: {signature}\n";
-    //     s += $"numberOfThisDisk: {numberOfThisDisk}\n";
-    //     s += $"numberOfTheDiskWithStartOfCentralDirectory: {numberOfTheDiskWithStartOfCentralDirectory}\n";
-    //     s += $"nCentralDirectoryEntries_ThisDisk: {nCentralDirectoryEntries_ThisDisk}\n";
-    //     s += $"nCentralDirectoryEntries_Total: {nCentralDirectoryEntries_Total}\n";
-    //     s += $"centralDirectorySize: {centralDirectorySize}\n";
-    //     s += $"startOfCentralDirOffset: {startOfCentralDirOffset}\n";
-    //     s += $"commentLength: {commentLength}\n";
-    //     s += "comment: " + Encoding.ASCII.GetString(comment);
-    //     return s;
-    // }
-}
-
-class ZIP_FileHeader
-{
-    public uint signature; //PK12 
-    public ushort versionMadeBy;
-    public ushort versionNeededToExtract;
-    public ushort flags;
-    public ushort compressionMethod;
-    public ushort lastModifiedTime;
-    public ushort lastModifiedDate;
-    public uint crc32;
-    public uint compressedSize;
-    public uint uncompressedSize;
-    public ushort fileNameLength;
-    public ushort extraFieldLength;
-    public ushort fileCommentLength;
-    public ushort diskNumberStart;
-    public ushort internalFileAttribs;
-    public uint externalFileAttribs;
-    public uint relativeOffsetOfLocalHeader;
-    public byte[] fileName;
-    public byte[] extraField;
-    public byte[] fileComment;
-
-    //Helper
-    public uint Size => (uint)(46 + fileNameLength + extraFieldLength + fileCommentLength);
-
-    public ZIP_FileHeader(BinaryReader reader)
-    {
-        signature = reader.ReadUInt32();
-        versionMadeBy = reader.ReadUInt16();
-        versionNeededToExtract = reader.ReadUInt16();
-        flags = reader.ReadUInt16();
-        compressionMethod = reader.ReadUInt16();
-        lastModifiedTime = reader.ReadUInt16();
-        lastModifiedDate = reader.ReadUInt16();
-        crc32 = reader.ReadUInt32();
-        compressedSize = reader.ReadUInt32();
-        uncompressedSize = reader.ReadUInt32();
-        fileNameLength = reader.ReadUInt16();
-        extraFieldLength = reader.ReadUInt16();
-        fileCommentLength = reader.ReadUInt16();
-        diskNumberStart = reader.ReadUInt16();
-        internalFileAttribs = reader.ReadUInt16();
-        externalFileAttribs = reader.ReadUInt32();
-        relativeOffsetOfLocalHeader = reader.ReadUInt32();
-        fileName = reader.ReadBytes(fileNameLength);
-        extraField = reader.ReadBytes(extraFieldLength);
-        fileComment = reader.ReadBytes(fileCommentLength);
-    }
-
-    public ZIP_FileHeader(ZIP_LocalFileHeader localHeader, uint offset)
-    {
-        signature = 33639248; //PK12
-        versionMadeBy = 20; //Windows //TODO
-        versionNeededToExtract = localHeader.versionNeededToExtract;
-        flags = 0;
-        compressionMethod = localHeader.compressionMethod;
-        lastModifiedTime = 0; //Ignore
-        lastModifiedDate = 0; //Ignore
-        crc32 = localHeader.crc32;
-        compressedSize = localHeader.compressedSize; // TODO
-        uncompressedSize = localHeader.uncompressedSize;
-        fileNameLength = localHeader.fileNameLength;
-        extraFieldLength = 0; //Ignore
-        fileCommentLength = 0; //Ignore
-        diskNumberStart = 0; //Ignore
-        internalFileAttribs = 0; //Ignore
-        externalFileAttribs = 0; //Ignore
-        relativeOffsetOfLocalHeader = offset;
-        fileName = localHeader.fileName;
-        extraField = []; //Ignore
-        fileComment = []; //Ignore
-    }
-
-    // public override string ToString()
-    // {
-    //     string s = "";
-    //     s += $"signature: {signature}\n";
-    //     s += $"versionMadeBy: {versionMadeBy}\n";
-    //     s += $"versionNeededToExtract: {versionNeededToExtract}\n";
-    //     s += $"flags: {flags}\n";
-    //     s += $"compressionMethod: {compressionMethod}\n";
-    //     s += $"lastModifiedTime: {lastModifiedTime}\n";
-    //     s += $"lastModifiedDate: {lastModifiedDate}\n";
-    //     s += $"crc32: {crc32}\n";
-    //     s += $"compressedSize: {compressedSize}\n";
-    //     s += $"uncompressedSize: {uncompressedSize}\n";
-    //     s += $"fileNameLength: {fileNameLength}\n";
-    //     s += $"extraFieldLength: {extraFieldLength}\n";
-    //     s += $"fileCommentLength: {fileCommentLength}\n";
-    //     s += $"diskNumberStart: {diskNumberStart}\n";
-    //     s += $"internalFileAttribs: {internalFileAttribs}\n";
-    //     s += $"externalFileAttribs: {externalFileAttribs}\n";
-    //     s += $"relativeOffsetOfLocalHeader: {relativeOffsetOfLocalHeader}\n";
-    //     s += "filename: " + Encoding.ASCII.GetString(fileName) + "\n";
-    //     s += "extra field: " + Encoding.ASCII.GetString(extraField) + "\n";
-    //     s += "file comment: " + Encoding.ASCII.GetString(fileComment) + "\n";
-    //     return s;
-    // }
-
-    public void Write(BinaryWriter writer)
-    {
-        writer.Write(signature);
-        writer.Write(versionMadeBy);
-        writer.Write(versionNeededToExtract);
-        writer.Write(flags);
-        writer.Write(compressionMethod);
-        writer.Write(lastModifiedTime);
-        writer.Write(lastModifiedDate);
-        writer.Write(crc32);
-        writer.Write(compressedSize);
-        writer.Write(uncompressedSize);
-        writer.Write(fileNameLength);
-        writer.Write(extraFieldLength);
-        writer.Write(fileCommentLength);
-        writer.Write(diskNumberStart);
-        writer.Write(internalFileAttribs);
-        writer.Write(externalFileAttribs);
-        writer.Write(relativeOffsetOfLocalHeader);
-        writer.Write(fileName!);
-
-        if (extraFieldLength > 0 && extraField != null)
-            writer.Write(extraField);
-        if (fileCommentLength > 0 && fileComment != null)
-            writer.Write(fileComment);
-    }
-}
-class ZIP_LocalFileHeader
-{
-    public uint signature = 67324752; //PK34 
-    public ushort versionNeededToExtract;
-    public ushort flags;
-    public ushort compressionMethod;
-    public ushort lastModifiedTime;
-    public ushort lastModifiedDate;
-    public uint crc32;
-    public uint compressedSize;
-    public uint uncompressedSize;
-    public ushort fileNameLength;
-    public ushort extraFieldLength;
-    public byte[] fileName;
-    public byte[] extraField;
-
-    //Helper
-    public uint Size => (uint)(46 + fileNameLength + extraFieldLength);
-
-    public ZIP_LocalFileHeader(ReadOnlySpan<byte> fileData, string internalPath)
-    {
-        signature = 67324752; //PK34
-        versionNeededToExtract = 10;
-        flags = 0; //Ignore
-        compressionMethod = 0; //TODO
-        lastModifiedTime = 0; //Ignore
-        lastModifiedDate = 0; //Ignore
-        crc32 = HashToUInt32(fileData);
-        compressedSize = (uint)fileData.Length; //TODO
-        uncompressedSize = (uint)fileData.Length;
-        fileNameLength = (ushort)internalPath.Length;
-        extraFieldLength = 0; //Ignore
-        fileName = Encoding.ASCII.GetBytes(internalPath);
-        extraField = [];
-    }
-
-    public void Write(BinaryWriter writer)
-    {
-        writer.Write(signature);
-        writer.Write(versionNeededToExtract);
-        writer.Write(flags);
-        writer.Write(compressionMethod);
-        writer.Write(lastModifiedTime);
-        writer.Write(lastModifiedDate);
-        writer.Write(crc32);
-        writer.Write(compressedSize);
-        writer.Write(uncompressedSize);
-        writer.Write(fileNameLength);
-        writer.Write(extraFieldLength);
-        if (fileNameLength != 0) writer.Write(fileName);
-        if (extraFieldLength != 0) writer.Write(extraField);
-    }
-};
-

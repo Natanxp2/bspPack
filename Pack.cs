@@ -204,14 +204,7 @@ Provide a path to a vpk path to unpack it.
 
 		Console.WriteLine("Running bspzip...");
 		//PackBSP(outputFile);
-		LumpManager.PackBSP(pakfile.Files);
-
-		if (compress)
-		{
-			Console.WriteLine("Compressing BSP...");
-			//CompressBSP();
-			LumpManager.CompressBSP();
-		}
+		LumpManager.PackBSP(pakfile.Files, compress);
 
 		DeleteTempFiles();
 		Message.Success("Finished!");
